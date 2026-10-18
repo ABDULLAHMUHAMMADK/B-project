@@ -27,15 +27,15 @@ connectDB();
 
 const app = express();
 
-// 1. Manual Failsafe CORS Header Injection
+// 1. Universal Dynamic CORS Handling
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  
-  // Allow production frontend, local dev, and Vercel preview domains
-  if (!origin || origin.includes('newproject-7gyb') || origin.includes('localhost') || origin.endsWith('.vercel.app')) {
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+
+  // Echo back requesting origin to allow dynamic cross-origin credentials on Vercel
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
   } else {
-    res.setHeader('Access-Control-Allow-Origin', 'https://newproject-7gyb.vercel.app');
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
 
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -45,7 +45,7 @@ app.use((req, res, next) => {
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
   );
 
-  // Return 200 immediately for preflight OPTIONS requests
+  // Instantly resolve browser preflight OPTIONS checks
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
