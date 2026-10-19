@@ -46,7 +46,7 @@ const Register = () => {
       setAuth({ user, token });
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed. Please check your details.');
+      setError(err.response?.data?.error || 'Registration failed. Please check your asdasdas details.');
     } finally {
       setLoading(false);
     }

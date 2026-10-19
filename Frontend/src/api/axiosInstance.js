@@ -11,7 +11,7 @@ const axiosInstance = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
+ console.log(import.meta.env.VITE_API_URL)
 // Request Interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
