@@ -12,12 +12,18 @@ export const initSocket = () => {
   if (!socket) {
     socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
       auth: { token },
-      autoConnect: true,
-      reconnectionAttempts: 5,
+      autoConnect: false, // Prevents continuous 404 polling loops when serverless WebSockets are inactive
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 3,
+      timeout: 5000,
     });
 
     socket.on('connect', () => {
       console.log('Socket Connected:', socket.id);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.warn('Socket connection error (disabled or unmonitored serverless socket):', err.message);
     });
 
     socket.on('disconnect', () => {
