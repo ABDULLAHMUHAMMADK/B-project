@@ -39,7 +39,8 @@ const Login = () => {
         navigate('/dashboard', { replace: true });
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Invalid email or password. Please try again.');
+      console.log(err)
+      setError(err.response?.data?.error );
     } finally {
       setLoading(false);
     }

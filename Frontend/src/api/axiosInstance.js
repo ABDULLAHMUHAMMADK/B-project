@@ -54,7 +54,7 @@ const DEFAULT_API_URL = 'https://b-project-tau.vercel.app/api';
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || DEFAULT_API_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
