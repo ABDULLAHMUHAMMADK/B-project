@@ -18,6 +18,8 @@ import adminRoutes from './src/routes/adminRoutes.js';
 import referralRoutes from './src/routes/referralRoutes.js';
 import errorHandler from './src/middleware/errorHandler.js';
 import { initYieldCron } from './src/jobs/yieldCron.js';
+import stripeTestRoutes from './src/routes/stripeTestRoutes.js';
+import { handleStripeTestWebhook } from './src/controllers/stripeTestWebhookController.js';
 
 dotenv.config();
 
@@ -59,10 +61,17 @@ app.use(
   })
 );
 
-// 3. Express Body Parser
+// 3. STRIPE WEBHOOK ROUTE (Must be mounted BEFORE express.json() for signature verification)
+app.post(
+  '/api/test-stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  handleStripeTestWebhook
+);
+
+// 4. Express Body Parser (For standard JSON routes)
 app.use(express.json({ limit: '10kb' }));
 
-// 4. Custom NoSQL Injection Sanitizer
+// 5. Custom NoSQL Injection Sanitizer
 app.use((req, res, next) => {
   if (req.body) {
     req.body = mongoSanitize.sanitize(req.body, { replaceWith: '_' });
@@ -73,10 +82,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// 5. Prevent HTTP Parameter Pollution
+// 6. Prevent HTTP Parameter Pollution
 app.use(hpp());
 
-// 6. Rate Limiters
+// 7. Rate Limiters
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -93,7 +102,7 @@ const authLimiter = rateLimit({
 
 app.use('/api', generalLimiter);
 
-// 7. Mount API Routes
+// 8. Mount API Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/deposits', depositRoutes);
@@ -101,6 +110,7 @@ app.use('/api/webhooks', webhookRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/referrals', referralRoutes);
+app.use('/api/test-stripe', stripeTestRoutes);
 
 // Health Check
 app.get('/', (req, res) => {
