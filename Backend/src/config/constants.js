@@ -1,14 +1,15 @@
-// src/config/constants.js
+// Backend/src/config/constants.js
 
 // Investment Thresholds
-export const MINIMUM_INITIAL_DEPOSIT = 300; // $300 minimum threshold
+export const MINIMUM_INITIAL_DEPOSIT = 300; // $300 minimum deposit threshold
 
 // Withdrawal Rules
-export const WITHDRAWAL_GRACE_PERIOD_HOURS = 24; // 24-hour grace period for initial withdrawal
+// 3 minutes testing threshold (0.05 hours = 3 minutes)
+export const WITHDRAWAL_GRACE_PERIOD_HOURS = 0.05; 
 export const WITHDRAWAL_LOCK_PROFIT_TARGET = 50;  // $50 profit required after grace period
-export const WITHDRAWAL_FEE_PERCENTAGE = 0.20;    // 20% platform fee deduction
+export const WITHDRAWAL_FEE_PERCENTAGE = 0.20;   // 20% platform fee deduction
 
 // Yield & Referral Rules
-export const DAILY_YIELD_RATE = 0.01;              // 1% daily compounding yield
-export const REFERRAL_DIRECT_BONUS_FLAT = 50.0;    // Solid $50 direct bonus to referrer upon 24h qualification
-export const REFERRAL_DAILY_PASSIVE_USD = 0.20;    // $0.20 daily passive reward from active referred user node
+export const DAILY_YIELD_RATE = 0.01;              // 1% daily yield
+export const REFERRAL_DIRECT_BONUS_FLAT = 50.0;    // $50 direct bonus
+export const REFERRAL_DAILY_PASSIVE_USD = 0.20;    // $0.20 daily passive reward
