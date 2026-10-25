@@ -41,7 +41,7 @@ export const getTopUpInfo = async (req, res, next) => {
     if (currentBalance > 0 && currentBalance < MINIMUM_INITIAL_DEPOSIT) {
       minRequiredDeposit = MINIMUM_INITIAL_DEPOSIT - currentBalance;
     } else if (currentBalance >= MINIMUM_INITIAL_DEPOSIT) {
-      minRequiredDeposit = 1; // Standard minimum for accounts already meeting threshold
+      minRequiredDeposit = 1;
     }
 
     res.status(200).json({
@@ -70,11 +70,15 @@ export const getWithdrawalInfo = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Wallet not found' });
     }
 
-    // Check 24-hour grace period status
+    const priorWithdrawalCount = await Transaction.countDocuments({
+      user: req.user._id,
+      type: 'WITHDRAWAL_REQUEST',
+    });
+
     let isInGracePeriod = false;
     let hoursRemainingInGrace = 0;
 
-    if (user.firstDepositAt && !user.hasUsedGracePeriod) {
+    if (user.firstDepositAt && !user.hasUsedGracePeriod && priorWithdrawalCount === 0) {
       const now = new Date();
       const firstDepositTime = new Date(user.firstDepositAt);
       const hoursElapsed = (now - firstDepositTime) / (1000 * 60 * 60);
@@ -85,11 +89,6 @@ export const getWithdrawalInfo = async (req, res, next) => {
       }
     }
 
-    // Withdrawal eligibility rule:
-    // User can withdraw if:
-    // 1. Currently inside their single 24-hour grace window
-    // OR
-    // 2. Unwithdrawn accumulated profit >= $50
     const profitTargetMet = wallet.unwithdrawnProfitCounter >= WITHDRAWAL_LOCK_PROFIT_TARGET;
     const canWithdraw = isInGracePeriod || profitTargetMet;
 
@@ -102,13 +101,13 @@ export const getWithdrawalInfo = async (req, res, next) => {
         referralBalance: wallet.referralBalance,
         binancePayId: wallet.binancePayId,
         withdrawalRules: {
-          hasUsedGracePeriod: user.hasUsedGracePeriod,
+          hasUsedGracePeriod: user.hasUsedGracePeriod || priorWithdrawalCount > 0,
           isInGracePeriod,
           hoursRemainingInGrace,
           profitLockTarget: WITHDRAWAL_LOCK_PROFIT_TARGET,
           profitTargetMet,
           canWithdraw,
-          platformFeePercentage: WITHDRAWAL_FEE_PERCENTAGE * 100, // 20%
+          platformFeePercentage: WITHDRAWAL_FEE_PERCENTAGE * 100,
         },
       },
     });

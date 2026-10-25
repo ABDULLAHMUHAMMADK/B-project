@@ -15,12 +15,11 @@ import {
 export const calculateTierYield = (balance) => {
   if (balance < MINIMUM_INITIAL_DEPOSIT) return 0;
 
-  // Floor down to nearest $100 bracket
   const baseTier = Math.floor(balance / 100) * 100;
-  return baseTier * DAILY_YIELD_RATE; // e.g., 300 * 0.01 = $3.00
+  return baseTier * DAILY_YIELD_RATE;
 };
 
-// Check and trigger flat $50 direct referral bonuses once referred user completes holding period
+// Check and trigger flat $50 direct referral bonuses ON THE VERY FIRST CRON CYCLE
 export const processPendingDirectReferrals = async () => {
   const pendingReferrals = await Referral.find({ hasTriggeredInitialBonus: false });
 
@@ -31,14 +30,21 @@ export const processPendingDirectReferrals = async () => {
     if (userB && walletB) {
       const isBalanceEligible = walletB.mainBalance >= MINIMUM_INITIAL_DEPOSIT;
 
+      // QUALIFICATION CHECK: 
+      // User B is qualified if their balance is >= $300 AND either:
+      // 1. userB.hasUsedGracePeriod is true (1st cycle completed)
+      // OR
+      // 2. 3 minutes (0.05 hours) have elapsed since firstDepositAt
       let hasStayedRequiredPeriod = false;
-      if (userB.firstDepositAt) {
-        const hoursElapsed = (new Date() - new Date(userB.firstDepositAt)) / (1000 * 60 * 60);
-        // Uses dynamic constant (0.05 hours for 3-minute testing, 24 hours in production)
+      if (userB.hasUsedGracePeriod) {
+        hasStayedRequiredPeriod = true;
+      } else if (userB.firstDepositAt) {
+        const timeDiffMs = new Date().getTime() - new Date(userB.firstDepositAt).getTime() + 15000; // 15s tolerance
+        const hoursElapsed = timeDiffMs / (1000 * 60 * 60);
         hasStayedRequiredPeriod = hoursElapsed >= WITHDRAWAL_GRACE_PERIOD_HOURS;
       }
 
-      // Condition: User B maintained $300+ for the required grace period
+      // Condition: User B maintained $300+ through the single 1st grace period
       if (isBalanceEligible && hasStayedRequiredPeriod) {
         const walletA = await Wallet.findOne({ user: ref.referrer });
 
@@ -52,16 +58,16 @@ export const processPendingDirectReferrals = async () => {
             user: ref.referrer,
             type: 'REFERRAL_DIRECT_BONUS',
             amount: REFERRAL_DIRECT_BONUS_FLAT,
-            description: `Flat $50 direct referral reward credited (Referred user maintained $300+ for grace period)`,
+            description: `Flat $50 direct referral reward credited (Referred user completed 1st cycle hold)`,
           });
 
-          // 3. Mark bonus as triggered and qualify referrer for daily passive rewards
+          // 3. Mark bonus as triggered and qualify referrer for daily passive rewards instantly
           ref.hasTriggeredInitialBonus = true;
           ref.isPassiveEligible = true;
           ref.totalEarnedFromUser += REFERRAL_DIRECT_BONUS_FLAT;
           await ref.save();
 
-          console.log(`✅ [Referral System] Unlocked $50 direct bonus for referrer ${ref.referrer}`);
+          console.log(`✅ [Referral System] Unlocked $50 direct bonus for referrer ${ref.referrer} on Cycle 1!`);
         }
       }
     }
@@ -73,10 +79,7 @@ export const processDailyYields = async () => {
   console.log('--- Starting Daily Yield & Referral Processing ---');
 
   try {
-    // Step 1: Evaluate & payout qualifying flat $50 direct referral bonuses
-    await processPendingDirectReferrals();
-
-    // Step 2: Fetch all wallets with mainBalance >= $300
+    // STEP 1: Fetch all wallets with mainBalance >= $300 and distribute daily 1% yield
     const eligibleWallets = await Wallet.find({ mainBalance: { $gte: MINIMUM_INITIAL_DEPOSIT } }).populate('user');
 
     let processedCount = 0;
@@ -91,7 +94,7 @@ export const processDailyYields = async () => {
         wallet.unwithdrawnProfitCounter += yieldAmount;
         await wallet.save();
 
-        // Create Transaction record for user statement history
+        // Create Transaction record for statement history
         await Transaction.create({
           user: wallet.user._id,
           type: 'DAILY_YIELD',
@@ -99,9 +102,11 @@ export const processDailyYields = async () => {
           description: `Daily 1% compounding yield on $${wallet.mainBalance} USDT tier base`,
         });
 
-        // Flip hasUsedGracePeriod to true if grace period has passed since first deposit
+        // IMMEDIATELY FLIP GRACE PERIOD FLAG on the 1st yield distribution!
         if (wallet.user.firstDepositAt && !wallet.user.hasUsedGracePeriod) {
-          const hoursElapsed = (new Date() - new Date(wallet.user.firstDepositAt)) / (1000 * 60 * 60);
+          const timeDiffMs = new Date().getTime() - new Date(wallet.user.firstDepositAt).getTime() + 15000;
+          const hoursElapsed = timeDiffMs / (1000 * 60 * 60);
+
           if (hoursElapsed >= WITHDRAWAL_GRACE_PERIOD_HOURS) {
             await User.findByIdAndUpdate(wallet.user._id, { hasUsedGracePeriod: true });
           }
@@ -112,7 +117,10 @@ export const processDailyYields = async () => {
       }
     }
 
-    // Step 3: Process $0.20 Daily Passive Referral Bonuses
+    // STEP 2: Evaluate & payout flat $50 direct referral bonus (NOW GUARANTEED ON CYCLE 1)
+    await processPendingDirectReferrals();
+
+    // STEP 3: Process $0.20 Daily Passive Referral Bonuses
     const activeReferrals = await Referral.find({ isPassiveEligible: true });
     let referralBonusCount = 0;
 

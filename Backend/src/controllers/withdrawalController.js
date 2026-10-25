@@ -17,7 +17,7 @@ export const requestWithdrawal = async (req, res, next) => {
   try {
     const { amount, binancePayId } = req.body;
 
-    if (!amount || amount <= 0) {
+    if (!amount || Number(amount) <= 0) {
       return res.status(400).json({ success: false, error: 'Please specify a valid withdrawal amount' });
     }
 
@@ -32,30 +32,39 @@ export const requestWithdrawal = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Wallet record not found' });
     }
 
-    // Evaluate single 24-hour grace window status
+    const priorWithdrawalCount = await Transaction.countDocuments({
+      user: req.user._id,
+      type: 'WITHDRAWAL_REQUEST',
+    });
+
+    // Initial Grace Period check:
+    // User is ONLY in initial grace period if:
+    // 1. hasUsedGracePeriod is false
+    // 2. ZERO prior withdrawals
+    // 3. Time elapsed is strictly <= 3 minutes (0.05 hours)
     let isInGracePeriod = false;
-    if (user.firstDepositAt && !user.hasUsedGracePeriod) {
+    if (user.firstDepositAt && !user.hasUsedGracePeriod && priorWithdrawalCount === 0) {
       const hoursElapsed = (new Date() - new Date(user.firstDepositAt)) / (1000 * 60 * 60);
       if (hoursElapsed <= WITHDRAWAL_GRACE_PERIOD_HOURS) {
         isInGracePeriod = true;
       }
     }
 
-    // Evaluate profit lock unlock condition
+    // Profit Lock Target check ($50 unwithdrawn profit required once grace period ends or after 1st cashout)
     const profitTargetMet = wallet.unwithdrawnProfitCounter >= WITHDRAWAL_LOCK_PROFIT_TARGET;
     const canWithdraw = isInGracePeriod || profitTargetMet;
 
     if (!canWithdraw) {
       return res.status(400).json({
         success: false,
-        error: `Withdrawal locked. Your 24-hour initial grace period has expired and you must accumulate at least $${WITHDRAWAL_LOCK_PROFIT_TARGET} USDT in unwithdrawn profit to unlock cashouts. Current accumulated profit: $${wallet.unwithdrawnProfitCounter.toFixed(2)} USDT.`,
+        error: `Withdrawal locked. You must accumulate at least $${WITHDRAWAL_LOCK_PROFIT_TARGET} USDT in new unwithdrawn yield profits to unlock cashout. Current accumulated profit: $${wallet.unwithdrawnProfitCounter.toFixed(2)} USDT.`,
       });
     }
 
-    // Determine available total balance (Profit + Referral + Main Capital)
+    const withdrawAmount = Number(amount);
     const totalAvailable = wallet.profitBalance + wallet.referralBalance + wallet.mainBalance;
 
-    if (amount > totalAvailable) {
+    if (withdrawAmount > totalAvailable) {
       return res.status(400).json({
         success: false,
         error: `Insufficient total balance. Available balance: $${totalAvailable.toFixed(2)} USDT.`,
@@ -63,14 +72,13 @@ export const requestWithdrawal = async (req, res, next) => {
     }
 
     // Calculate 20% platform fee
-    const feeDeducted = amount * WITHDRAWAL_FEE_PERCENTAGE;
-    const netAmount = amount - feeDeducted;
+    const feeDeducted = withdrawAmount * WITHDRAWAL_FEE_PERCENTAGE;
+    const netAmount = withdrawAmount - feeDeducted;
 
-    // Save destination Binance Pay ID to wallet profile for quick future cashouts
     wallet.binancePayId = binancePayId;
 
-    // Deduct requested amount from profit/referral/main balance logically
-    let remainingToDeduct = amount;
+    // Deduct requested amount: Profit -> Referral -> Main Balance
+    let remainingToDeduct = withdrawAmount;
 
     if (wallet.profitBalance >= remainingToDeduct) {
       wallet.profitBalance -= remainingToDeduct;
@@ -92,33 +100,31 @@ export const requestWithdrawal = async (req, res, next) => {
       wallet.mainBalance -= remainingToDeduct;
     }
 
-    // Reset unwithdrawn profit counter back to 0 upon withdrawal
+    // ALWAYS reset unwithdrawn profit counter back to 0 upon withdrawal
     wallet.unwithdrawnProfitCounter = 0;
 
-    // Mark single grace period as used
-    if (isInGracePeriod) {
+    // Mark grace period as permanently used on first withdrawal
+    if (!user.hasUsedGracePeriod) {
       user.hasUsedGracePeriod = true;
       await user.save();
     }
 
     await wallet.save();
 
-    // Log pending withdrawal in ledger
     const transaction = await Transaction.create({
       user: req.user._id,
       type: 'WITHDRAWAL_REQUEST',
-      amount,
+      amount: withdrawAmount,
       feeDeducted,
       netAmount,
       status: 'PENDING',
       description: `Withdrawal request to Binance Pay ID: ${binancePayId}`,
     });
 
-    // Send transaction email confirmation
     sendEmail({
       to: user.email,
       subject: 'Withdrawal Request Received - TradeYield',
-      html: withdrawalRequestedTemplate(user.name, amount, feeDeducted, netAmount, binancePayId),
+      html: withdrawalRequestedTemplate(user.name, withdrawAmount, feeDeducted, netAmount, binancePayId),
     }).catch((err) => console.error('Withdrawal request email error:', err.message));
 
     res.status(200).json({
