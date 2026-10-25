@@ -12,7 +12,6 @@ export const handleStripeTestWebhook = async (req, res) => {
 
   try {
     const stripe = getStripe();
-    // Verifies raw buffer payload against your local CLI webhook signing secret
     event = stripe.webhooks.constructEvent(
       req.body,
       sig,
@@ -23,7 +22,6 @@ export const handleStripeTestWebhook = async (req, res) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Handle checkout completion
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const transactionId = session.client_reference_id;
@@ -32,23 +30,28 @@ export const handleStripeTestWebhook = async (req, res) => {
       const transaction = await Transaction.findById(transactionId);
 
       if (transaction && transaction.status === 'PENDING') {
-        // 1. Mark ledger transaction as APPROVED
+        // 1. Approve Transaction
         transaction.status = 'APPROVED';
         await transaction.save();
 
-        // 2. Increment balance on User model
-        await User.findByIdAndUpdate(transaction.user, {
-          $inc: { balance: transaction.amount },
-        });
+        // 2. Update User balance AND set firstDepositAt if not already set
+        const userObj = await User.findById(transaction.user);
+        if (userObj) {
+          userObj.balance = (userObj.balance || 0) + transaction.amount;
+          if (!userObj.firstDepositAt) {
+            userObj.firstDepositAt = new Date();
+          }
+          await userObj.save();
+        }
 
-        // 3. Increment mainBalance on Wallet model (Read by React Dashboard UI)
+        // 3. Update Wallet mainBalance (Read by Dashboard UI)
         await Wallet.findOneAndUpdate(
           { user: transaction.user },
           { $inc: { mainBalance: transaction.amount } },
           { upsert: true, new: true }
         );
 
-        console.log(`✅ [TEST MODE] Transaction ${transactionId} approved! $${transaction.amount} credited.`);
+        console.log(`✅ [TEST MODE] Deposit ${transactionId} approved! $${transaction.amount} credited & firstDepositAt set.`);
       }
     } catch (dbErr) {
       console.error('❌ Error updating test deposit in database:', dbErr.message);

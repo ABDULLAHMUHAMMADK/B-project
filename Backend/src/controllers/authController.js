@@ -1,4 +1,4 @@
-// src/controllers/authController.js
+// Backend/src/controllers/authController.js
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import Wallet from '../models/Wallet.js';
@@ -78,7 +78,7 @@ export const registerUser = async (req, res, next) => {
 
     const token = generateToken(user._id);
 
-    // Send Welcome Email asynchronously without awaiting
+    // Send Welcome Email asynchronously
     sendEmail({
       to: user.email,
       subject: 'Welcome to TradeYield - Account Active',
@@ -96,6 +96,7 @@ export const registerUser = async (req, res, next) => {
           role: user.role,
           referralCode: user.referralCode,
           hasUsedGracePeriod: user.hasUsedGracePeriod,
+          firstDepositAt: user.firstDepositAt || null,
         },
         wallet: {
           mainBalance: wallet.mainBalance,
@@ -155,6 +156,7 @@ export const loginUser = async (req, res, next) => {
           role: user.role,
           referralCode: user.referralCode,
           hasUsedGracePeriod: user.hasUsedGracePeriod,
+          firstDepositAt: user.firstDepositAt || null,
         },
         wallet: {
           mainBalance: wallet ? wallet.mainBalance : 0,
@@ -188,6 +190,7 @@ export const getMe = async (req, res, next) => {
           role: user.role,
           referralCode: user.referralCode,
           hasUsedGracePeriod: user.hasUsedGracePeriod,
+          firstDepositAt: user.firstDepositAt || null,
         },
         wallet: {
           mainBalance: wallet ? wallet.mainBalance : 0,
