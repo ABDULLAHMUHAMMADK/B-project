@@ -10,7 +10,7 @@ import {
   WITHDRAWAL_FEE_PERCENTAGE,
 } from '../config/constants.js';
 
-// @desc    Submit Cashout/Withdrawal Request
+// @desc    Submit Cashout/Withdrawal Request (Sends to Admin Pending Queue)
 // @route   POST /api/withdrawals/request
 // @access  Private
 export const requestWithdrawal = async (req, res, next) => {
@@ -32,13 +32,14 @@ export const requestWithdrawal = async (req, res, next) => {
       return res.status(404).json({ success: false, error: 'Wallet record not found' });
     }
 
+    // Check for prior withdrawal requests
     const priorWithdrawalCount = await Transaction.countDocuments({
       user: req.user._id,
       type: 'WITHDRAWAL_REQUEST',
     });
 
+    // 1. Initial Grace Period Evaluation
     let isInGracePeriod = false;
-
     if (user.firstDepositAt) {
       const hoursElapsed = (new Date() - new Date(user.firstDepositAt)) / (1000 * 60 * 60);
 
@@ -50,13 +51,14 @@ export const requestWithdrawal = async (req, res, next) => {
       }
     }
 
+    // 2. Profit Lock Check ($50 unwithdrawn profit required)
     const profitTargetMet = wallet.unwithdrawnProfitCounter >= WITHDRAWAL_LOCK_PROFIT_TARGET;
     const canWithdraw = isInGracePeriod || profitTargetMet;
 
     if (!canWithdraw) {
       return res.status(400).json({
         success: false,
-        error: `Withdrawal locked. Initial grace period has ended. You must accumulate at least $${WITHDRAWAL_LOCK_PROFIT_TARGET} USDT in unwithdrawn yield profits to unlock cashout. Current accumulated profit: $${wallet.unwithdrawnProfitCounter.toFixed(2)} USDT.`,
+        error: `Withdrawal locked. You must generate at least $${WITHDRAWAL_LOCK_PROFIT_TARGET} USDT in new yield/referral profits since your last cashout to unlock withdrawals. Current accumulated profit: $${wallet.unwithdrawnProfitCounter.toFixed(2)} USDT.`,
       });
     }
 
@@ -70,42 +72,15 @@ export const requestWithdrawal = async (req, res, next) => {
       });
     }
 
+    // Calculate 20% platform fee
     const feeDeducted = withdrawAmount * WITHDRAWAL_FEE_PERCENTAGE;
     const netAmount = withdrawAmount - feeDeducted;
 
+    // Update target Binance Pay ID
     wallet.binancePayId = binancePayId;
-
-    let remainingToDeduct = withdrawAmount;
-
-    if (wallet.profitBalance >= remainingToDeduct) {
-      wallet.profitBalance -= remainingToDeduct;
-      remainingToDeduct = 0;
-    } else {
-      remainingToDeduct -= wallet.profitBalance;
-      wallet.profitBalance = 0;
-    }
-
-    if (remainingToDeduct > 0 && wallet.referralBalance >= remainingToDeduct) {
-      wallet.referralBalance -= remainingToDeduct;
-      remainingToDeduct = 0;
-    } else if (remainingToDeduct > 0) {
-      remainingToDeduct -= wallet.referralBalance;
-      wallet.referralBalance = 0;
-    }
-
-    if (remainingToDeduct > 0) {
-      wallet.mainBalance -= remainingToDeduct;
-    }
-
-    wallet.unwithdrawnProfitCounter = 0;
-
-    if (!user.hasUsedGracePeriod) {
-      user.hasUsedGracePeriod = true;
-      await user.save();
-    }
-
     await wallet.save();
 
+    // Create PENDING transaction entry (NO wallet balance deducted yet)
     const transaction = await Transaction.create({
       user: req.user._id,
       type: 'WITHDRAWAL_REQUEST',
@@ -113,21 +88,22 @@ export const requestWithdrawal = async (req, res, next) => {
       feeDeducted,
       netAmount,
       status: 'PENDING',
-      description: `Withdrawal request to Binance Pay ID: ${binancePayId}`,
+      description: `Pending withdrawal request to Binance Pay ID: ${binancePayId}`,
     });
 
+    // Send confirmation email
     sendEmail({
       to: user.email,
-      subject: 'Withdrawal Request Received - TradeYield',
+      subject: 'Withdrawal Request Submitted - TradeYield',
       html: withdrawalRequestedTemplate(user.name, withdrawAmount, feeDeducted, netAmount, binancePayId),
     }).catch((err) => console.error('Withdrawal request email error:', err.message));
 
     res.status(200).json({
       success: true,
-      message: 'Withdrawal request submitted successfully',
+      message: 'Withdrawal request submitted for Admin review',
       data: {
         transaction,
-        updatedWallet: {
+        walletStatus: {
           mainBalance: wallet.mainBalance,
           profitBalance: wallet.profitBalance,
           referralBalance: wallet.referralBalance,

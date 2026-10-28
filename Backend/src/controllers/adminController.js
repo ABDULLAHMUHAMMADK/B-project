@@ -60,7 +60,7 @@ export const getPendingDeposits = async (req, res, next) => {
 // @access  Private/Admin
 export const processDepositAction = async (req, res, next) => {
   try {
-    const { action } = req.body; // 'APPROVE' or 'REJECT'
+    const { action } = req.body;
     const transactionId = req.params.id;
 
     if (!['APPROVE', 'REJECT'].includes(action)) {
@@ -87,7 +87,6 @@ export const processDepositAction = async (req, res, next) => {
       });
     }
 
-    // Action === 'APPROVE'
     transaction.status = 'COMPLETED';
     await transaction.save();
 
@@ -98,7 +97,6 @@ export const processDepositAction = async (req, res, next) => {
     wallet.mainBalance += transaction.amount;
     await wallet.save();
 
-    // Record first deposit timestamp for 24h grace window & referral qualification
     if (previousBalance < MINIMUM_INITIAL_DEPOSIT && wallet.mainBalance >= MINIMUM_INITIAL_DEPOSIT) {
       if (!user.firstDepositAt) {
         user.firstDepositAt = new Date();
@@ -106,7 +104,6 @@ export const processDepositAction = async (req, res, next) => {
       }
     }
 
-    // Send confirmation email
     sendEmail({
       to: user.email,
       subject: 'Deposit Approved - TradeYield',
@@ -149,7 +146,7 @@ export const getPendingWithdrawals = async (req, res, next) => {
 // @access  Private/Admin
 export const processWithdrawalAction = async (req, res, next) => {
   try {
-    const { action, payoutTxHash } = req.body; // 'APPROVE' or 'REJECT'
+    const { action, payoutTxHash } = req.body;
     const transactionId = req.params.id;
 
     if (!['APPROVE', 'REJECT'].includes(action)) {
@@ -165,25 +162,69 @@ export const processWithdrawalAction = async (req, res, next) => {
       return res.status(400).json({ success: false, error: `Transaction already ${transaction.status.toLowerCase()}` });
     }
 
-    if (action === 'REJECT') {
-      // Refund requested funds back to user's profit balance
-      const wallet = await Wallet.findOne({ user: transaction.user });
-      if (wallet) {
-        wallet.profitBalance += transaction.amount;
-        await wallet.save();
-      }
+    const wallet = await Wallet.findOne({ user: transaction.user });
+    const user = await User.findById(transaction.user);
 
+    if (!wallet) {
+      return res.status(404).json({ success: false, error: 'User wallet record not found' });
+    }
+
+    if (action === 'REJECT') {
       transaction.status = 'REJECTED';
       await transaction.save();
 
       return res.status(200).json({
         success: true,
-        message: 'Withdrawal rejected and funds refunded to user profit balance',
+        message: 'Withdrawal request rejected. No funds deducted.',
         data: transaction,
       });
     }
 
     // Action === 'APPROVE'
+    const withdrawAmount = transaction.amount;
+    const totalAvailable = wallet.profitBalance + wallet.referralBalance + wallet.mainBalance;
+
+    if (withdrawAmount > totalAvailable) {
+      return res.status(400).json({
+        success: false,
+        error: `Insufficient user balance at time of approval. Total available: $${totalAvailable.toFixed(2)} USDT`,
+      });
+    }
+
+    // Deduct requested amount: Profit Balance -> Referral Balance -> Main Balance
+    let remainingToDeduct = withdrawAmount;
+
+    if (wallet.profitBalance >= remainingToDeduct) {
+      wallet.profitBalance -= remainingToDeduct;
+      remainingToDeduct = 0;
+    } else {
+      remainingToDeduct -= wallet.profitBalance;
+      wallet.profitBalance = 0;
+    }
+
+    if (remainingToDeduct > 0 && wallet.referralBalance >= remainingToDeduct) {
+      wallet.referralBalance -= remainingToDeduct;
+      remainingToDeduct = 0;
+    } else if (remainingToDeduct > 0) {
+      remainingToDeduct -= wallet.referralBalance;
+      wallet.referralBalance = 0;
+    }
+
+    if (remainingToDeduct > 0) {
+      wallet.mainBalance -= remainingToDeduct;
+    }
+
+    // MANDATORY LOCK RE-ENGAGEMENT: Reset profit counter to 0 & timestamp last withdrawal upon approval
+    wallet.unwithdrawnProfitCounter = 0;
+    wallet.lastWithdrawalAt = new Date();
+
+    if (user && !user.hasUsedGracePeriod) {
+      user.hasUsedGracePeriod = true;
+      await user.save();
+    }
+
+    await wallet.save();
+
     transaction.status = 'COMPLETED';
     if (payoutTxHash) {
       transaction.txHash = payoutTxHash;
@@ -192,8 +233,16 @@ export const processWithdrawalAction = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Withdrawal payout marked as completed',
-      data: transaction,
+      message: 'Withdrawal approved, funds deducted from user wallet, and payout marked completed',
+      data: {
+        transaction,
+        updatedWallet: {
+          mainBalance: wallet.mainBalance,
+          profitBalance: wallet.profitBalance,
+          referralBalance: wallet.referralBalance,
+          unwithdrawnProfitCounter: wallet.unwithdrawnProfitCounter,
+        },
+      },
     });
   } catch (error) {
     next(error);

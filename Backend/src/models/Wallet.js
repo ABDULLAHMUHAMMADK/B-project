@@ -19,7 +19,7 @@ const walletSchema = new mongoose.Schema(
     },
     unwithdrawnProfitCounter: {
       type: Number,
-      default: 0, // Tracks profit accumulated toward the $50 withdrawal unlock requirement
+      default: 0, // Tracks new profit accumulated toward the $50 withdrawal unlock requirement
     },
     referralBalance: {
       type: Number,
@@ -28,6 +28,10 @@ const walletSchema = new mongoose.Schema(
     binancePayId: {
       type: String,
       default: '', // User's personal Binance Pay ID for receiving withdrawals
+    },
+    lastWithdrawalAt: {
+      type: Date,
+      default: null, // Tracks exact timestamp of the user's most recent withdrawal
     },
   },
   {
