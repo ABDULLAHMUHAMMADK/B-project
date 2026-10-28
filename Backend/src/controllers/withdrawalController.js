@@ -37,27 +37,26 @@ export const requestWithdrawal = async (req, res, next) => {
       type: 'WITHDRAWAL_REQUEST',
     });
 
-    // Initial Grace Period check:
-    // User is ONLY in initial grace period if:
-    // 1. hasUsedGracePeriod is false
-    // 2. ZERO prior withdrawals
-    // 3. Time elapsed is strictly <= 3 minutes (0.05 hours)
     let isInGracePeriod = false;
-    if (user.firstDepositAt && !user.hasUsedGracePeriod && priorWithdrawalCount === 0) {
+
+    if (user.firstDepositAt) {
       const hoursElapsed = (new Date() - new Date(user.firstDepositAt)) / (1000 * 60 * 60);
-      if (hoursElapsed <= WITHDRAWAL_GRACE_PERIOD_HOURS) {
+
+      if (!user.hasUsedGracePeriod && priorWithdrawalCount === 0 && hoursElapsed < WITHDRAWAL_GRACE_PERIOD_HOURS) {
         isInGracePeriod = true;
+      } else if (!user.hasUsedGracePeriod && hoursElapsed >= WITHDRAWAL_GRACE_PERIOD_HOURS) {
+        user.hasUsedGracePeriod = true;
+        await user.save();
       }
     }
 
-    // Profit Lock Target check ($50 unwithdrawn profit required once grace period ends or after 1st cashout)
     const profitTargetMet = wallet.unwithdrawnProfitCounter >= WITHDRAWAL_LOCK_PROFIT_TARGET;
     const canWithdraw = isInGracePeriod || profitTargetMet;
 
     if (!canWithdraw) {
       return res.status(400).json({
         success: false,
-        error: `Withdrawal locked. You must accumulate at least $${WITHDRAWAL_LOCK_PROFIT_TARGET} USDT in new unwithdrawn yield profits to unlock cashout. Current accumulated profit: $${wallet.unwithdrawnProfitCounter.toFixed(2)} USDT.`,
+        error: `Withdrawal locked. Initial grace period has ended. You must accumulate at least $${WITHDRAWAL_LOCK_PROFIT_TARGET} USDT in unwithdrawn yield profits to unlock cashout. Current accumulated profit: $${wallet.unwithdrawnProfitCounter.toFixed(2)} USDT.`,
       });
     }
 
@@ -71,13 +70,11 @@ export const requestWithdrawal = async (req, res, next) => {
       });
     }
 
-    // Calculate 20% platform fee
     const feeDeducted = withdrawAmount * WITHDRAWAL_FEE_PERCENTAGE;
     const netAmount = withdrawAmount - feeDeducted;
 
     wallet.binancePayId = binancePayId;
 
-    // Deduct requested amount: Profit -> Referral -> Main Balance
     let remainingToDeduct = withdrawAmount;
 
     if (wallet.profitBalance >= remainingToDeduct) {
@@ -100,10 +97,8 @@ export const requestWithdrawal = async (req, res, next) => {
       wallet.mainBalance -= remainingToDeduct;
     }
 
-    // ALWAYS reset unwithdrawn profit counter back to 0 upon withdrawal
     wallet.unwithdrawnProfitCounter = 0;
 
-    // Mark grace period as permanently used on first withdrawal
     if (!user.hasUsedGracePeriod) {
       user.hasUsedGracePeriod = true;
       await user.save();

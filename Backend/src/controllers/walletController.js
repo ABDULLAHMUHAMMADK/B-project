@@ -9,9 +9,6 @@ import {
   WITHDRAWAL_FEE_PERCENTAGE,
 } from '../config/constants.js';
 
-// @desc    Get live user wallet details & audit stats
-// @route   GET /api/wallet/me
-// @access  Private
 export const getMyWallet = async (req, res, next) => {
   try {
     const wallet = await Wallet.findOne({ user: req.user._id });
@@ -28,9 +25,6 @@ export const getMyWallet = async (req, res, next) => {
   }
 };
 
-// @desc    Calculate dynamic minimum top-up required for current user
-// @route   GET /api/wallet/topup-info
-// @access  Private
 export const getTopUpInfo = async (req, res, next) => {
   try {
     const wallet = await Wallet.findOne({ user: req.user._id });
@@ -78,17 +72,23 @@ export const getWithdrawalInfo = async (req, res, next) => {
     let isInGracePeriod = false;
     let hoursRemainingInGrace = 0;
 
-    if (user.firstDepositAt && !user.hasUsedGracePeriod && priorWithdrawalCount === 0) {
+    if (user.firstDepositAt) {
       const now = new Date();
       const firstDepositTime = new Date(user.firstDepositAt);
       const hoursElapsed = (now - firstDepositTime) / (1000 * 60 * 60);
 
-      if (hoursElapsed <= WITHDRAWAL_GRACE_PERIOD_HOURS) {
+      // Grace period is active ONLY if hasUsedGracePeriod is false, prior withdrawals === 0, and hours elapsed < threshold
+      if (!user.hasUsedGracePeriod && priorWithdrawalCount === 0 && hoursElapsed < WITHDRAWAL_GRACE_PERIOD_HOURS) {
         isInGracePeriod = true;
-        hoursRemainingInGrace = (WITHDRAWAL_GRACE_PERIOD_HOURS - hoursElapsed).toFixed(2);
+        hoursRemainingInGrace = Math.max(0, WITHDRAWAL_GRACE_PERIOD_HOURS - hoursElapsed).toFixed(4);
+      } else if (!user.hasUsedGracePeriod && hoursElapsed >= WITHDRAWAL_GRACE_PERIOD_HOURS) {
+        // Auto-expire grace period flag in database if time limit exceeded
+        user.hasUsedGracePeriod = true;
+        await user.save();
       }
     }
 
+    // Profit lock check ($50 unwithdrawn profit required once grace period is over)
     const profitTargetMet = wallet.unwithdrawnProfitCounter >= WITHDRAWAL_LOCK_PROFIT_TARGET;
     const canWithdraw = isInGracePeriod || profitTargetMet;
 
