@@ -1,34 +1,44 @@
 // Backend/src/config/db.js
 import mongoose from 'mongoose';
 
-const connectDB = async () => {
-  try {
-    mongoose.set('bufferCommands', false);
+let cached = global.mongoose;
 
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+const connectDB = async () => {
+  if (cached.conn) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
       family: 4,
+    };
+
+    if (!process.env.MONGO_URI) {
+      throw new Error('MONGO_URI is missing from environment variables!');
+    }
+
+    cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((m) => {
+      console.log(`✅ MongoDB Connected: ${m.connection.host}`);
+      return m;
     });
-
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`❌ MongoDB Connection Error: ${error.message}`);
-    console.log('🔄 Retrying MongoDB connection in 3 seconds...');
-    setTimeout(connectDB, 3000); // Retry automatically after 3 seconds
   }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    console.error(`❌ MongoDB Connection Error: ${e.message}`);
+    throw e;
+  }
+
+  return cached.conn;
 };
-
-mongoose.connection.on('disconnected', () => {
-  console.warn('⚠️ Mongoose disconnected! Attempting reconnect...');
-});
-
-mongoose.connection.on('reconnected', () => {
-  console.log('🔄 Mongoose reconnected to MongoDB Atlas!');
-});
-
-mongoose.connection.on('error', (err) => {
-  console.error('❌ Mongoose connection error:', err.message);
-});
 
 export default connectDB;
