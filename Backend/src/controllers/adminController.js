@@ -3,119 +3,89 @@ import Transaction from '../models/Transaction.js';
 import Wallet from '../models/Wallet.js';
 import User from '../models/User.js';
 import { MINIMUM_INITIAL_DEPOSIT } from '../config/constants.js';
-import { sendEmail } from '../services/emailService.js';
-import { depositApprovedTemplate } from '../utils/emailTemplates.js';
 
-// @desc    Get system-wide financial overview & metrics
+// @desc    Get system-wide financial overview, platform fees, & user investment deficits
 // @route   GET /api/admin/stats
 // @access  Private/Admin
 export const getAdminStats = async (req, res, next) => {
   try {
     const totalUsers = await User.countDocuments({ role: 'user' });
-    const wallets = await Wallet.find({});
+    const wallets = await Wallet.find({}).populate('user', 'name email createdAt role');
 
-    const totalLiquidity = wallets.reduce((acc, w) => acc + w.mainBalance, 0);
-    const totalProfitBalances = wallets.reduce((acc, w) => acc + w.profitBalance, 0);
-    const totalReferralBalances = wallets.reduce((acc, w) => acc + w.referralBalance, 0);
+    // Financial Metrics
+    const totalLiquidity = wallets.reduce((acc, w) => acc + (w.mainBalance || 0), 0);
+    const totalProfitBalances = wallets.reduce((acc, w) => acc + (w.profitBalance || 0), 0);
+    const totalReferralBalances = wallets.reduce((acc, w) => acc + (w.referralBalance || 0), 0);
+    const totalWithdrawableBalance = totalLiquidity + totalProfitBalances + totalReferralBalances;
 
-    const pendingDepositsCount = await Transaction.countDocuments({ type: 'DEPOSIT', status: 'PENDING' });
-    const pendingWithdrawalsCount = await Transaction.countDocuments({ type: 'WITHDRAWAL_REQUEST', status: 'PENDING' });
-
-    res.status(200).json({
-      success: true,
-      data: {
-        totalUsers,
-        totalLiquidity,
-        totalProfitBalances,
-        totalReferralBalances,
-        pendingDepositsCount,
-        pendingWithdrawalsCount,
-      },
+    // Revenue Metrics: Sum of all 20% platform fees collected on approved cashouts
+    const completedWithdrawals = await Transaction.find({
+      type: 'WITHDRAWAL_REQUEST',
+      status: 'COMPLETED',
     });
-  } catch (error) {
-    next(error);
-  }
-};
+    const totalPlatformFeesCollected = completedWithdrawals.reduce(
+      (acc, t) => acc + (t.feeDeducted || 0),
+      0
+    );
 
-// @desc    Get list of all pending manual deposits
-// @route   GET /api/admin/deposits/pending
-// @access  Private/Admin
-export const getPendingDeposits = async (req, res, next) => {
-  try {
-    const pendingDeposits = await Transaction.find({ type: 'DEPOSIT', status: 'PENDING' })
-      .populate('user', 'name email')
-      .sort('-createdAt');
+    // User Segmentation & Threshold Deficit Calculations
+    let fullyInvestedCount = 0; // >= $300
+    let partiallyInvestedCount = 0; // > $0 and < $300
+    let zeroInvestedCount = 0; // $0
 
-    res.status(200).json({
-      success: true,
-      data: pendingDeposits,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+    const userInvestmentDetails = [];
 
-// @desc    Approve or reject a manual deposit request
-// @route   PUT /api/admin/deposits/:id/action
-// @access  Private/Admin
-export const processDepositAction = async (req, res, next) => {
-  try {
-    const { action } = req.body;
-    const transactionId = req.params.id;
+    for (const w of wallets) {
+      if (!w.user || w.user.role === 'admin') continue;
 
-    if (!['APPROVE', 'REJECT'].includes(action)) {
-      return res.status(400).json({ success: false, error: "Action must be 'APPROVE' or 'REJECT'" });
-    }
+      const mainBal = w.mainBalance || 0;
+      let status = 'UNINVESTED';
+      let remainingToMinThreshold = MINIMUM_INITIAL_DEPOSIT;
 
-    const transaction = await Transaction.findById(transactionId);
-    if (!transaction || transaction.type !== 'DEPOSIT') {
-      return res.status(404).json({ success: false, error: 'Pending deposit transaction not found' });
-    }
+      if (mainBal >= MINIMUM_INITIAL_DEPOSIT) {
+        status = 'ACTIVE_QUALIFIED';
+        remainingToMinThreshold = 0;
+        fullyInvestedCount++;
+      } else if (mainBal > 0) {
+        status = 'BELOW_THRESHOLD';
+        remainingToMinThreshold = MINIMUM_INITIAL_DEPOSIT - mainBal;
+        partiallyInvestedCount++;
+      } else {
+        zeroInvestedCount++;
+      }
 
-    if (transaction.status !== 'PENDING') {
-      return res.status(400).json({ success: false, error: `Transaction already ${transaction.status.toLowerCase()}` });
-    }
-
-    if (action === 'REJECT') {
-      transaction.status = 'REJECTED';
-      await transaction.save();
-
-      return res.status(200).json({
-        success: true,
-        message: 'Manual deposit request rejected',
-        data: transaction,
+      userInvestmentDetails.push({
+        userId: w.user._id,
+        name: w.user.name,
+        email: w.user.email,
+        mainBalance: mainBal,
+        totalWithdrawable: mainBal + (w.profitBalance || 0) + (w.referralBalance || 0),
+        status,
+        remainingToMinThreshold,
       });
     }
 
-    transaction.status = 'COMPLETED';
-    await transaction.save();
-
-    const wallet = await Wallet.findOne({ user: transaction.user });
-    const user = await User.findById(transaction.user);
-
-    const previousBalance = wallet.mainBalance;
-    wallet.mainBalance += transaction.amount;
-    await wallet.save();
-
-    if (previousBalance < MINIMUM_INITIAL_DEPOSIT && wallet.mainBalance >= MINIMUM_INITIAL_DEPOSIT) {
-      if (!user.firstDepositAt) {
-        user.firstDepositAt = new Date();
-        await user.save();
-      }
-    }
-
-    sendEmail({
-      to: user.email,
-      subject: 'Deposit Approved - TradeYield',
-      html: depositApprovedTemplate(user.name, transaction.amount),
-    }).catch((err) => console.error('Admin deposit approval email error:', err.message));
+    const pendingWithdrawalsCount = await Transaction.countDocuments({
+      type: 'WITHDRAWAL_REQUEST',
+      status: 'PENDING',
+    });
 
     res.status(200).json({
       success: true,
-      message: 'Deposit approved and wallet credited successfully',
       data: {
-        transaction,
-        updatedMainBalance: wallet.mainBalance,
+        metrics: {
+          totalUsers,
+          totalLiquidity,
+          totalWithdrawableBalance,
+          totalPlatformFeesCollected,
+          pendingWithdrawalsCount,
+          segmentation: {
+            fullyInvestedCount,
+            partiallyInvestedCount,
+            zeroInvestedCount,
+          },
+        },
+        userInvestmentDetails,
       },
     });
   } catch (error) {
@@ -214,7 +184,7 @@ export const processWithdrawalAction = async (req, res, next) => {
       wallet.mainBalance -= remainingToDeduct;
     }
 
-    // MANDATORY LOCK RE-ENGAGEMENT: Reset profit counter to 0 & timestamp last withdrawal upon approval
+    // Reset lock counter and timestamp cashout approval
     wallet.unwithdrawnProfitCounter = 0;
     wallet.lastWithdrawalAt = new Date();
 
