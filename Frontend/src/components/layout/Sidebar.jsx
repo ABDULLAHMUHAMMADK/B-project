@@ -3,96 +3,140 @@ import React, { memo } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   PieChart,
-  Layers,
+  Clock,
   Users,
   ShieldCheck,
-  Info,
+  User,
   LogOut,
   X,
   Activity,
+  Power,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useSystemStore } from '../../store/useSystemStore';
 
-const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout }) => {
+const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTab, pendingWithdrawalsCount = 0 }) => {
   const user = useAuthStore((state) => state.user);
+  const { isMaintenanceMode, setMaintenanceMode } = useSystemStore();
 
   const activeClass =
-    'flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-950/60 text-cyan-300 font-semibold border border-cyan-700/40 shadow-lg shadow-cyan-950/50';
+    'flex items-center justify-between w-full px-4 py-3 rounded-xl bg-purple-950/60 text-purple-300 font-semibold border border-purple-700/40 shadow-lg shadow-purple-950/50 text-left';
   const inactiveClass =
-    'flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:bg-slate-900/80 hover:text-cyan-300 transition';
+    'flex items-center justify-between w-full px-4 py-3 rounded-xl text-gray-400 hover:bg-slate-900/80 hover:text-purple-300 transition text-left';
+
+  const handleNavClick = (tab) => {
+    if (setActiveTab) setActiveTab(tab);
+    if (onCloseSidebar) onCloseSidebar();
+  };
 
   return (
     <aside
-      class={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0a101d] border-r border-cyan-900/30 p-5 transform transition-transform duration-300 md:relative md:translate-x-0 md:bg-transparent md:border-r-0 md:p-0 md:w-60 shrink-0 ${
+      className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0a101d] border-r border-purple-900/30 p-5 transform transition-transform duration-300 md:relative md:translate-x-0 md:bg-transparent md:border-r-0 md:p-0 md:w-60 shrink-0 ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
-      <div class="flex justify-between items-center mb-6 md:hidden">
-        <span class="text-lg font-bold text-cyan-400">Navigation Menu</span>
-        <button onClick={onCloseSidebar} class="text-gray-400 hover:text-white">
-          <X class="w-6 h-6" />
+      <div className="flex justify-between items-center mb-6 md:hidden">
+        <span className="text-lg font-bold text-purple-400">Navigation Menu</span>
+        <button onClick={onCloseSidebar} className="text-gray-400 hover:text-white">
+          <X className="w-6 h-6" />
         </button>
       </div>
 
       {/* User Summary Box */}
-      <div class="mb-6 p-3 rounded-xl bg-slate-900/60 border border-slate-800">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-full border border-cyan-400 bg-cyan-950 flex items-center justify-center text-cyan-300 font-bold">
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+      <div className="mb-6 p-3 rounded-xl bg-slate-900/60 border border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full border border-purple-400 bg-purple-950 flex items-center justify-center text-purple-300 font-bold">
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
           </div>
-          <div class="min-w-0">
-            <p class="text-sm font-bold text-white truncate">{user?.name || 'Investor'}</p>
-            <p class="text-xs text-emerald-400 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Verified Account
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-white truncate">{user?.name || 'Admin User'}</p>
+            <p className="text-xs text-purple-400 flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5" /> Super Admin
             </p>
           </div>
         </div>
       </div>
 
       {/* Nav Links */}
-      <nav class="space-y-1.5">
-        <NavLink to="/dashboard" class={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
-          <PieChart class="w-5 h-5 text-cyan-400" />
-          <span>Dashboard</span>
-        </NavLink>
+      <nav className="space-y-1.5">
+        <button
+          onClick={() => handleNavClick('overview')}
+          className={activeTab === 'overview' ? activeClass : inactiveClass}
+        >
+          <div className="flex items-center gap-3">
+            <PieChart className="w-5 h-5 text-purple-400" />
+            <span>Overview</span>
+          </div>
+        </button>
 
-        {user?.role === 'admin' && (
-          <NavLink to="/admin" class={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
-            <ShieldCheck class="w-5 h-5 text-purple-400" />
-            <span>Admin Queue</span>
-          </NavLink>
-        )}
+        <button
+          onClick={() => handleNavClick('withdrawals')}
+          className={activeTab === 'withdrawals' ? activeClass : inactiveClass}
+        >
+          <div className="flex items-center gap-3">
+            <Clock className="w-5 h-5 text-amber-400" />
+            <span>Cashout Queue</span>
+          </div>
+          {pendingWithdrawalsCount > 0 && (
+            <span className="bg-amber-500 text-black px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+              {pendingWithdrawalsCount}
+            </span>
+          )}
+        </button>
 
-        <a href="#projects" class={inactiveClass}>
-          <Layers class="w-5 h-5" />
-          <span>Invested Pools</span>
-        </a>
-        <a href="#referrals" class={inactiveClass}>
-          <Users class="w-5 h-5" />
-          <span>Referral Program</span>
-        </a>
+        <button
+          onClick={() => handleNavClick('users')}
+          className={activeTab === 'users' ? activeClass : inactiveClass}
+        >
+          <div className="flex items-center gap-3">
+            <Users className="w-5 h-5 text-cyan-400" />
+            <span>User Directory</span>
+          </div>
+        </button>
+
+        <button
+          onClick={() => handleNavClick('profile')}
+          className={activeTab === 'profile' ? activeClass : inactiveClass}
+        >
+          <div className="flex items-center gap-3">
+            <User className="w-5 h-5 text-emerald-400" />
+            <span>Profile Settings</span>
+          </div>
+        </button>
       </nav>
 
-      {/* Logout Action */}
-      <div class="mt-8 pt-6 border-t border-slate-800/80">
+      {/* Logout & Maintenance Action */}
+      <div className="mt-8 pt-6 border-t border-slate-800/80 space-y-2">
+        <button
+          onClick={() => setMaintenanceMode(!isMaintenanceMode)}
+          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold border transition ${
+            isMaintenanceMode
+              ? 'bg-rose-950/80 border-rose-800 text-rose-300'
+              : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+          }`}
+        >
+          <Power className="w-4 h-4" />
+          <span>{isMaintenanceMode ? 'Maintenance: ON' : 'Toggle Maintenance'}</span>
+        </button>
+
         <button
           onClick={onLogout}
-          class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 hover:bg-rose-950/30 border border-transparent hover:border-rose-900/40 transition font-medium"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-400 hover:bg-rose-950/30 border border-transparent hover:border-rose-900/40 transition font-medium"
         >
-          <LogOut class="w-5 h-5" />
+          <LogOut className="w-5 h-5" />
           <span>Logout</span>
         </button>
       </div>
 
       {/* Live Yield Engine Status Box */}
-      <div class="mt-8 p-4 rounded-xl neon-card hidden md:block text-xs">
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-slate-400">Yield Engine:</span>
-          <span class="text-emerald-400 font-bold flex items-center gap-1">
-            <Activity class="w-3.5 h-3.5 animate-pulse" /> Active
+      <div className="mt-6 p-4 rounded-xl neon-card hidden md:block text-xs">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-slate-400">Admin Control:</span>
+          <span className="text-emerald-400 font-bold flex items-center gap-1">
+            <Activity className="w-3.5 h-3.5 animate-pulse" /> Active
           </span>
         </div>
-        <p class="text-slate-400">Auto-incrementing daily profit ledger every 24h.</p>
+        <p className="text-slate-400">Live system financial audit & liquidity engine.</p>
       </div>
     </aside>
   );
