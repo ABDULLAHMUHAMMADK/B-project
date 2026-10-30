@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
+import mongoose from 'mongoose';
 
 import connectDB from './src/config/db.js';
 
@@ -32,7 +33,6 @@ const app = express();
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  // Echo back requesting origin to allow dynamic cross-origin credentials on Vercel
   if (origin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else {
@@ -46,7 +46,6 @@ app.use((req, res, next) => {
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
   );
 
-  // Instantly resolve browser preflight OPTIONS checks
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -54,24 +53,39 @@ app.use((req, res, next) => {
   next();
 });
 
-// 2. Enable Security HTTP Headers
+// 2. Database Connection Middleware Guard
+// Prevents requests from buffering for 10 seconds if network dropped
+app.use((req, res, next) => {
+  // Skip check for healthcheck & webhooks
+  if (req.path === '/' || req.path.includes('/webhooks')) return next();
+
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      error: 'Database connection reconnecting. Please try again in a few seconds.',
+    });
+  }
+  next();
+});
+
+// 3. Security HTTP Headers
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
   })
 );
 
-// 3. STRIPE WEBHOOK ROUTE (Must be mounted BEFORE express.json() for signature verification)
+// 4. Stripe Webhook Route
 app.post(
   '/api/test-stripe/webhook',
   express.raw({ type: 'application/json' }),
   handleStripeTestWebhook
 );
 
-// 4. Express Body Parser (For standard JSON routes)
+// 5. Express Body Parser
 app.use(express.json({ limit: '10kb' }));
 
-// 5. Custom NoSQL Injection Sanitizer
+// 6. Custom NoSQL Injection Sanitizer
 app.use((req, res, next) => {
   if (req.body) {
     req.body = mongoSanitize.sanitize(req.body, { replaceWith: '_' });
@@ -82,10 +96,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// 6. Prevent HTTP Parameter Pollution
+// 7. Prevent HTTP Parameter Pollution
 app.use(hpp());
 
-// 7. Rate Limiters
+// 8. Rate Limiters
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -102,7 +116,7 @@ const authLimiter = rateLimit({
 
 app.use('/api', generalLimiter);
 
-// 8. Mount API Routes
+// 9. Mount API Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/deposits', depositRoutes);
