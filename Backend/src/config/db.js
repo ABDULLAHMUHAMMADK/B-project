@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of waiting indefinitely
+      // serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of waiting indefinitely
     });
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
