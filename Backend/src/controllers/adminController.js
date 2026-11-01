@@ -2,6 +2,7 @@
 import Transaction from '../models/Transaction.js';
 import Wallet from '../models/Wallet.js';
 import User from '../models/User.js';
+import SystemSettings from '../models/SystemSettings.js';
 import { MINIMUM_INITIAL_DEPOSIT } from '../config/constants.js';
 
 // @desc    Get system-wide financial overview, platform fees, & user investment deficits
@@ -213,6 +214,49 @@ export const processWithdrawalAction = async (req, res, next) => {
           unwithdrawnProfitCounter: wallet.unwithdrawnProfitCounter,
         },
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get global maintenance mode status
+// @route   GET /api/admin/maintenance
+// @access  Public
+export const getMaintenanceStatus = async (req, res, next) => {
+  try {
+    let settings = await SystemSettings.findOne({});
+    if (!settings) {
+      settings = await SystemSettings.create({});
+    }
+
+    res.status(200).json({
+      success: true,
+      isMaintenanceMode: settings.isMaintenanceMode,
+      message: settings.maintenanceMessage,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Toggle system maintenance mode
+// @route   PUT /api/admin/maintenance
+// @access  Private/Admin
+export const toggleMaintenanceStatus = async (req, res, next) => {
+  try {
+    let settings = await SystemSettings.findOne({});
+    if (!settings) {
+      settings = await SystemSettings.create({});
+    }
+
+    settings.isMaintenanceMode = !settings.isMaintenanceMode;
+    await settings.save();
+
+    res.status(200).json({
+      success: true,
+      message: `System maintenance mode set to ${settings.isMaintenanceMode ? 'ON' : 'OFF'}`,
+      isMaintenanceMode: settings.isMaintenanceMode,
     });
   } catch (error) {
     next(error);

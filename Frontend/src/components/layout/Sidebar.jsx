@@ -1,6 +1,5 @@
 // src/components/layout/Sidebar.jsx
 import React, { memo } from 'react';
-import { NavLink } from 'react-router-dom';
 import {
   PieChart,
   Clock,
@@ -17,7 +16,7 @@ import { useSystemStore } from '../../store/useSystemStore';
 
 const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTab, pendingWithdrawalsCount = 0 }) => {
   const user = useAuthStore((state) => state.user);
-  const { isMaintenanceMode, setMaintenanceMode } = useSystemStore();
+  const { isMaintenanceMode, toggleMaintenanceMode } = useSystemStore();
 
   const activeClass =
     'flex items-center justify-between w-full px-4 py-3 rounded-xl bg-purple-950/60 text-purple-300 font-semibold border border-purple-700/40 shadow-lg shadow-purple-950/50 text-left';
@@ -42,22 +41,22 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
         </button>
       </div>
 
-      {/* User Summary Box */}
+      {/* User Profile Box */}
       <div className="mb-6 p-3 rounded-xl bg-slate-900/60 border border-slate-800">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full border border-purple-400 bg-purple-950 flex items-center justify-center text-purple-300 font-bold">
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-white truncate">{user?.name || 'Admin User'}</p>
+            <p className="text-sm font-bold text-white truncate">{user?.name || 'User'}</p>
             <p className="text-xs text-purple-400 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" /> Super Admin
+              <ShieldCheck className="w-3.5 h-3.5" /> {user?.role === 'admin' ? 'Super Admin' : 'Verified Client'}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Nav Links */}
+      {/* Navigation */}
       <nav className="space-y-1.5">
         <button
           onClick={() => handleNavClick('overview')}
@@ -69,30 +68,34 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
           </div>
         </button>
 
-        <button
-          onClick={() => handleNavClick('withdrawals')}
-          className={activeTab === 'withdrawals' ? activeClass : inactiveClass}
-        >
-          <div className="flex items-center gap-3">
-            <Clock className="w-5 h-5 text-amber-400" />
-            <span>Cashout Queue</span>
-          </div>
-          {pendingWithdrawalsCount > 0 && (
-            <span className="bg-amber-500 text-black px-2 py-0.5 rounded-full text-[10px] font-extrabold">
-              {pendingWithdrawalsCount}
-            </span>
-          )}
-        </button>
+        {user?.role === 'admin' && (
+          <>
+            <button
+              onClick={() => handleNavClick('withdrawals')}
+              className={activeTab === 'withdrawals' ? activeClass : inactiveClass}
+            >
+              <div className="flex items-center gap-3">
+                <Clock className="w-5 h-5 text-amber-400" />
+                <span>Cashout Queue</span>
+              </div>
+              {pendingWithdrawalsCount > 0 && (
+                <span className="bg-amber-500 text-black px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+                  {pendingWithdrawalsCount}
+                </span>
+              )}
+            </button>
 
-        <button
-          onClick={() => handleNavClick('users')}
-          className={activeTab === 'users' ? activeClass : inactiveClass}
-        >
-          <div className="flex items-center gap-3">
-            <Users className="w-5 h-5 text-cyan-400" />
-            <span>User Directory</span>
-          </div>
-        </button>
+            <button
+              onClick={() => handleNavClick('users')}
+              className={activeTab === 'users' ? activeClass : inactiveClass}
+            >
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-cyan-400" />
+                <span>User Directory</span>
+              </div>
+            </button>
+          </>
+        )}
 
         <button
           onClick={() => handleNavClick('profile')}
@@ -105,19 +108,21 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
         </button>
       </nav>
 
-      {/* Logout & Maintenance Action */}
+      {/* Admin Maintenance Control & Logout */}
       <div className="mt-8 pt-6 border-t border-slate-800/80 space-y-2">
-        <button
-          onClick={() => setMaintenanceMode(!isMaintenanceMode)}
-          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold border transition ${
-            isMaintenanceMode
-              ? 'bg-rose-950/80 border-rose-800 text-rose-300'
-              : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
-          }`}
-        >
-          <Power className="w-4 h-4" />
-          <span>{isMaintenanceMode ? 'Maintenance: ON' : 'Toggle Maintenance'}</span>
-        </button>
+        {user?.role === 'admin' && (
+          <button
+            onClick={() => toggleMaintenanceMode()}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold border transition ${
+              isMaintenanceMode
+                ? 'bg-rose-950/80 border-rose-800 text-rose-300'
+                : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+            }`}
+          >
+            <Power className="w-4 h-4" />
+            <span>{isMaintenanceMode ? 'Maintenance Mode: ON' : 'Toggle Maintenance'}</span>
+          </button>
+        )}
 
         <button
           onClick={onLogout}
@@ -128,15 +133,15 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
         </button>
       </div>
 
-      {/* Live Yield Engine Status Box */}
+      {/* Status Card */}
       <div className="mt-6 p-4 rounded-xl neon-card hidden md:block text-xs">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-slate-400">Admin Control:</span>
+          <span className="text-slate-400">System Engine:</span>
           <span className="text-emerald-400 font-bold flex items-center gap-1">
             <Activity className="w-3.5 h-3.5 animate-pulse" /> Active
           </span>
         </div>
-        <p className="text-slate-400">Live system financial audit & liquidity engine.</p>
+        <p className="text-slate-400">Real-time off-chain ledger & yield engine.</p>
       </div>
     </aside>
   );

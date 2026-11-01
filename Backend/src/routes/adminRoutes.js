@@ -1,19 +1,23 @@
-// src/routes/adminRoutes.js
 import express from 'express';
+import { protect, adminOnly } from '../middleware/authMiddleware.js';
 import {
   getAdminStats,
   getPendingWithdrawals,
   processWithdrawalAction,
+  getMaintenanceStatus,
+  toggleMaintenanceStatus,
 } from '../controllers/adminController.js';
-import { protect, admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Apply protect & admin middlewares to all routes in this router
-router.use(protect, admin);
+// Public route to check maintenance mode
+router.get('/maintenance', getMaintenanceStatus);
 
+// Protected Admin routes
+router.use(protect, adminOnly);
 router.get('/stats', getAdminStats);
 router.get('/withdrawals/pending', getPendingWithdrawals);
 router.put('/withdrawals/:id/action', processWithdrawalAction);
+router.put('/maintenance', toggleMaintenanceStatus);
 
 export default router;

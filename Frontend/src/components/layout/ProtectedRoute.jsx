@@ -1,5 +1,5 @@
 // src/components/layout/ProtectedRoute.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useSystemStore } from '../../store/useSystemStore';
@@ -7,14 +7,18 @@ import MaintenanceOverlay from '../common/MaintenanceOverlay';
 
 const ProtectedRoute = ({ allowedRoles }) => {
   const { isAuthenticated, role } = useAuthStore();
-  const isMaintenanceMode = useSystemStore((state) => state.isMaintenanceMode);
+  const { isMaintenanceMode, fetchMaintenanceStatus } = useSystemStore();
+
+  useEffect(() => {
+    fetchMaintenanceStatus();
+  }, [fetchMaintenanceStatus]);
 
   // 1. Unauthenticated -> Redirect to Login
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // 2. Global Maintenance Mode Active -> Block standard users
+  // 2. Global Maintenance Mode Active -> Block regular users
   if (isMaintenanceMode && role !== 'admin') {
     return <MaintenanceOverlay />;
   }
@@ -24,7 +28,6 @@ const ProtectedRoute = ({ allowedRoles }) => {
     return role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />;
   }
 
-  // Render nested child routes
   return <Outlet />;
 };
 

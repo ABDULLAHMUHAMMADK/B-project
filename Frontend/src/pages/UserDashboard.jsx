@@ -33,6 +33,7 @@ import ErrorBoundary from '../components/common/ErrorBoundary';
 import GrowthChart from '../components/dashboard/GrowthChart';
 import ProjectCard from '../components/dashboard/ProjectCard';
 import LedgerTable from '../components/dashboard/LedgerTable';
+import MarketOverviewWidget from '../components/dashboard/MarketOverviewWidget';
 
 // Modals
 import DepositModal from '../components/modals/DepositModal';
@@ -70,7 +71,7 @@ const UserDashboard = () => {
       return res.data.data;
     },
   });
-console.log(referralData,"abdullah")
+
   // 3. Socket.io Real-Time Listener Initialization
   useEffect(() => {
     const socket = initSocket();
@@ -227,6 +228,9 @@ console.log(referralData,"abdullah")
               highlight
             />
           </div>
+
+          {/* LIVE MARKET TICKER WIDGET (Crypto, Gold, Forex) */}
+          <MarketOverviewWidget />
 
           {/* Chart & Referral System Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
