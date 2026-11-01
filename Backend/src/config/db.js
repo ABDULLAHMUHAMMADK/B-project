@@ -1,22 +1,51 @@
 // Backend/src/config/db.js
 import mongoose from 'mongoose';
 
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of waiting indefinitely
-    });
+// Cache connection across serverless invocations
+let cached = global.mongoose;
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`❌ MongoDB Connection Error: ${error.message}`);
-    // Do not crash process immediately if testing locally, or retry connection
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+const connectDB = async () => {
+  // Return existing connection
+  if (cached.conn) {
+    return cached.conn;
   }
+
+  // Reuse pending connection promise (prevents duplicate connections)
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,        // Important for serverless
+      minPoolSize: 0,
+      bufferCommands: false,  // Fail fast instead of buffering silently
+    }).then((mongooseInstance) => {
+      console.log(`✅ MongoDB Connected: ${mongooseInstance.connection.host}`);
+      return mongooseInstance;
+    }).catch((err) => {
+      cached.promise = null;  // Reset so next request retries
+      console.error(`❌ MongoDB Connection Error: ${err.message}`);
+      throw err;
+    });
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (err) {
+    cached.promise = null;
+    throw err;
+  }
+
+  return cached.conn;
 };
 
-// Log Mongoose connection events
 mongoose.connection.on('disconnected', () => {
-  console.warn('⚠️ Mongoose disconnected from MongoDB Atlas!');
+  console.warn('⚠️ Mongoose disconnected');
+  cached.conn = null;
+  cached.promise = null;
 });
 
 mongoose.connection.on('error', (err) => {
