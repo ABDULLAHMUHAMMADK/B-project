@@ -1,4 +1,3 @@
-// src/controllers/walletController.js
 import Wallet from '../models/Wallet.js';
 import User from '../models/User.js';
 import Transaction from '../models/Transaction.js';
@@ -22,6 +21,30 @@ export const getMyWallet = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: wallet,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get full list of user transactions with filtering
+// @route   GET /api/wallet/transactions
+// @access  Private
+export const getTransactions = async (req, res, next) => {
+  try {
+    const { type } = req.query;
+    const filter = { user: req.user._id };
+
+    if (type && type !== 'ALL') {
+      filter.type = type;
+    }
+
+    const transactions = await Transaction.find(filter).sort('-createdAt');
+
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      data: transactions,
     });
   } catch (error) {
     next(error);
@@ -92,7 +115,6 @@ export const getWithdrawalInfo = async (req, res, next) => {
       }
     }
 
-    // Profit lock condition: Requires $50 in brand-new unwithdrawn profit since last withdrawal
     const profitTargetMet = wallet.unwithdrawnProfitCounter >= WITHDRAWAL_LOCK_PROFIT_TARGET;
     const canWithdraw = isInGracePeriod || profitTargetMet;
 

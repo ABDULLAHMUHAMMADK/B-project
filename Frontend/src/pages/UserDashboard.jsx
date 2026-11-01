@@ -1,4 +1,3 @@
-// src/pages/UserDashboard.jsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -8,12 +7,6 @@ import {
   Wallet,
   PlusCircle,
   ArrowUpRight,
-  Copy,
-  Check,
-  Share2,
-  Layers,
-  Cpu,
-  Coins,
 } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 
@@ -31,7 +24,6 @@ import ErrorBoundary from '../components/common/ErrorBoundary';
 
 // Dashboard Specific Components
 import GrowthChart from '../components/dashboard/GrowthChart';
-import ProjectCard from '../components/dashboard/ProjectCard';
 import LedgerTable from '../components/dashboard/LedgerTable';
 import MarketOverviewWidget from '../components/dashboard/MarketOverviewWidget';
 
@@ -49,12 +41,9 @@ const UserDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [activeChartFilter, setActiveChartFilter] = useState('7D');
-  const [activePoolTab, setActivePoolTab] = useState('all');
 
-  // 1. Fetch live user wallet details via TanStack Query
   const { data: wallet } = useQuery({
     queryKey: ['wallet'],
     queryFn: async () => {
@@ -63,16 +52,6 @@ const UserDashboard = () => {
     },
   });
 
-  // 2. Fetch referral tree data
-  const { data: referralData } = useQuery({
-    queryKey: ['referrals'],
-    queryFn: async () => {
-      const res = await axiosInstance.get('/referrals/my-tree');
-      return res.data.data;
-    },
-  });
-
-  // 3. Socket.io Real-Time Listener Initialization
   useEffect(() => {
     const socket = initSocket();
 
@@ -99,21 +78,11 @@ const UserDashboard = () => {
     setTimeout(() => setToastMsg(''), 3500);
   }, []);
 
-  const handleCopyReferral = () => {
-    const link = `https://tradeyield.io/register?ref=${referralData?.referralCode || user?.referralCode}`;
-    navigator.clipboard.writeText(link);
-    setCopied(true);
-    showToast('Referral invitation link copied to clipboard!');
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  // Financial Balances Calculation
   const mainBalance = wallet?.mainBalance || 0;
   const profitBalance = wallet?.profitBalance || 0;
   const referralBalance = wallet?.referralBalance || 0;
   const totalWithdrawable = mainBalance + profitBalance + referralBalance;
 
-  // Chart Data Configuration
   const chartData = useMemo(() => {
     const labels = activeChartFilter === '7D'
       ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -145,14 +114,12 @@ const UserDashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#060a12] text-slate-100 flex flex-col relative pb-20 md:pb-6">
-      {/* Navbar Header */}
       <Navbar
         onMobileSidebarToggle={() => setSidebarOpen(true)}
         onOpenNotifications={() => showToast('No new notifications')}
       />
 
       <div className="max-w-7xl mx-auto w-full flex gap-6 px-4 py-6 md:px-8 flex-1">
-        {/* Sidebar */}
         <Sidebar
           isOpen={sidebarOpen}
           onCloseSidebar={() => setSidebarOpen(false)}
@@ -160,7 +127,6 @@ const UserDashboard = () => {
         />
 
         <main className="flex-1 min-w-0">
-          {/* Hero Banner */}
           <div className="relative overflow-hidden rounded-2xl neon-card p-6 mb-6 border border-cyan-500/30">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
@@ -190,7 +156,6 @@ const UserDashboard = () => {
             </div>
           </div>
 
-          {/* 4 Core Financial Stat Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard
               title="Total Investment"
@@ -229,11 +194,9 @@ const UserDashboard = () => {
             />
           </div>
 
-          {/* LIVE MARKET TICKER WIDGET (Crypto, Gold, Forex) */}
           <MarketOverviewWidget />
 
-          {/* Chart & Referral System Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div className="mb-6">
             <ErrorBoundary>
               <GrowthChart
                 chartData={chartData}
@@ -241,134 +204,15 @@ const UserDashboard = () => {
                 onFilterChange={setActiveChartFilter}
               />
             </ErrorBoundary>
-
-            {/* Referral System Card */}
-            <div id="referrals" className="neon-card p-5 rounded-2xl flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Share2 className="w-4 h-4 text-blue-400" /> Referral System
-                  </h3>
-                  <span className="text-xs bg-blue-950 text-blue-300 px-2 py-0.5 rounded-full border border-blue-800">$50 Flat Bonus</span>
-                </div>
-                <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  Share your personal link. Earn a solid $50 USDT direct bonus + $0.20 daily passive rewards when referred clients hold $300+ for 24h.
-                </p>
-
-                <div className="mb-4">
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Your Referral Link</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={`https://tradeyield.io/register?ref=${referralData?.referralCode || user?.referralCode || ''}`}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-cyan-300 font-mono focus:outline-none"
-                    />
-                    <button onClick={handleCopyReferral} className="btn-neon-primary px-4 py-2 rounded-xl text-xs font-bold shrink-0 flex items-center gap-1">
-                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} Copy
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800">
-                <div className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 text-center">
-                  <span className="block text-[11px] text-slate-400">Total Referred</span>
-                  <span className="text-lg font-bold text-white">{referralData?.totalReferredUsers || 0} Users</span>
-                </div>
-                <div className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 text-center">
-                  <span className="block text-[11px] text-slate-400">Earned Balance</span>
-                  <span className="text-lg font-bold text-emerald-400">${referralBalance.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
           </div>
 
-          {/* Managed Investment Allocation Pools */}
-          <div id="projects" className="neon-card p-5 rounded-2xl mb-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5 pb-4 border-b border-slate-800">
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-cyan-400" /> Managed Investment Allocation
-                </h3>
-                <p className="text-xs text-slate-400">Real-world business & algorithmic trading portfolio deployment.</p>
-              </div>
-
-              <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
-                {['all', 'forex', 'crypto'].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActivePoolTab(tab)}
-                    className={`px-4 py-1.5 rounded-xl text-xs font-semibold capitalize transition ${
-                      activePoolTab === tab
-                        ? 'bg-cyan-600 text-white shadow-md'
-                        : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'
-                    }`}
-                  >
-                    {tab === 'all' ? 'All Projects' : tab}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Managed Pool Cards */}
-            <div className="space-y-3">
-              {(activePoolTab === 'all' || activePoolTab === 'forex') && (
-                <ProjectCard
-                  title="Project Alpha: High-Frequency Forex Arbitrage"
-                  category="forex"
-                  fundedPercent={85}
-                  description="Automated EUR/USD & GBP/USD liquidity pools on MT5 bridge."
-                  poolAllocated="$2,500.00"
-                  totalTarget="$3,000.00"
-                  dailyYield="1.6"
-                  icon={TrendingUp}
-                  iconBg="bg-cyan-950 border-cyan-800 text-cyan-400"
-                />
-              )}
-
-              {(activePoolTab === 'all' || activePoolTab === 'crypto') && (
-                <ProjectCard
-                  title="Project Beta: E-Commerce & GPU Infrastructure"
-                  category="crypto"
-                  fundedPercent={70}
-                  description="Capital deployment in high-yield server hardware leasing."
-                  poolAllocated="$1,400.00"
-                  totalTarget="$2,000.00"
-                  dailyYield="1.4"
-                  icon={Cpu}
-                  iconBg="bg-blue-950 border-blue-800 text-blue-400"
-                />
-              )}
-
-              {(activePoolTab === 'all' || activePoolTab === 'crypto') && (
-                <ProjectCard
-                  title="Project Gamma: Liquidity Staking Vault"
-                  category="crypto"
-                  fundedPercent={40}
-                  description="Binance USDT automated liquidity pool market making."
-                  poolAllocated="$600.00"
-                  totalTarget="$1,500.00"
-                  dailyYield="1.8"
-                  icon={Coins}
-                  iconBg="bg-purple-950 border-purple-800 text-purple-400"
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Audit Ledger Table */}
           <LedgerTable transactions={wallet?.history || []} />
         </main>
       </div>
 
-      {/* Mobile Fixed Bottom Navigation Bar */}
-      <BottomNav onOpenDeposit={() => setDepositOpen(true)} />
-
-      {/* Floating Toast Notification */}
+      <BottomNav />
       <Toast message={toastMsg} />
 
-      {/* Financial Modals */}
       <DepositModal isOpen={depositOpen} onClose={() => setDepositOpen(false)} onShowToast={showToast} />
       <WithdrawModal isOpen={withdrawOpen} onClose={() => setWithdrawOpen(false)} onShowToast={showToast} />
     </div>
