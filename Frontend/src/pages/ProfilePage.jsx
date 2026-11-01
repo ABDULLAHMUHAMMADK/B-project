@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// src/pages/ProfilePage.jsx
+import React, { useState, useEffect } from 'react';
 import { User, Key, Save, CheckCircle } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import { useAuthStore } from '../store/useAuthStore';
@@ -10,20 +11,26 @@ import Toast from '../components/common/Toast';
 const ProfilePage = () => {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const setUser = useAuthStore((state) => state.setUser);
+  const updateUser = useAuthStore((state) => state.updateUser);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
-  // Profile Form State
+  // Local form state initialized from store
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // Password Change Form State
+  // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
+
+  // Keep local inputs synced if store hydrates/changes
+  useEffect(() => {
+    if (user?.name) setName(user.name);
+    if (user?.email) setEmail(user.email);
+  }, [user]);
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -35,7 +42,12 @@ const ProfilePage = () => {
     setSavingProfile(true);
     try {
       const res = await axiosInstance.put('/user/profile', { name, email });
-      if (setUser) setUser(res.data.data);
+
+      // Instantly update global Zustand state
+      if (updateUser && res.data?.data) {
+        updateUser(res.data.data);
+      }
+
       showToast('Profile updated successfully!');
     } catch (err) {
       showToast(err.response?.data?.error || 'Failed to update profile');
