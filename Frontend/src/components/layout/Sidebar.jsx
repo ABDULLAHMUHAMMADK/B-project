@@ -1,3 +1,4 @@
+// src/components/layout/Sidebar.jsx
 import React, { memo } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
@@ -6,6 +7,8 @@ import {
   FileText,
   User,
   ShieldCheck,
+  Clock,
+  Users,
   LogOut,
   X,
   Activity,
@@ -14,73 +17,144 @@ import {
 import { useAuthStore } from '../../store/useAuthStore';
 import { useSystemStore } from '../../store/useSystemStore';
 
-const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout }) => {
+const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTab, pendingWithdrawalsCount = 0 }) => {
   const user = useAuthStore((state) => state.user);
   const { isMaintenanceMode, toggleMaintenanceMode } = useSystemStore();
 
-  const activeClass =
-    'flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-cyan-950/60 text-cyan-300 font-semibold border border-cyan-700/40 shadow-lg shadow-cyan-950/50';
-  const inactiveClass =
-    'flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-400 hover:bg-slate-900/80 hover:text-cyan-300 transition';
+  const isAdmin = user?.role === 'admin';
+
+  const activeClass = isAdmin
+    ? 'flex items-center justify-between w-full px-4 py-3 rounded-xl bg-purple-950/60 text-purple-300 font-semibold border border-purple-700/40 shadow-lg shadow-purple-950/50 text-left'
+    : 'flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-cyan-950/60 text-cyan-300 font-semibold border border-cyan-700/40 shadow-lg shadow-cyan-950/50';
+
+  const inactiveClass = isAdmin
+    ? 'flex items-center justify-between w-full px-4 py-3 rounded-xl text-gray-400 hover:bg-slate-900/80 hover:text-purple-300 transition text-left'
+    : 'flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-400 hover:bg-slate-900/80 hover:text-cyan-300 transition';
+
+  const handleAdminTabClick = (tab) => {
+    if (setActiveTab) setActiveTab(tab);
+    if (onCloseSidebar) onCloseSidebar();
+  };
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0a101d] border-r border-cyan-900/30 p-5 transform transition-transform duration-300 md:relative md:translate-x-0 md:bg-transparent md:border-r-0 md:p-0 md:w-60 shrink-0 ${
+      className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0a101d] ${
+        isAdmin ? 'border-r border-purple-900/30' : 'border-r border-cyan-900/30'
+      } p-5 transform transition-transform duration-300 md:relative md:translate-x-0 md:bg-transparent md:border-r-0 md:p-0 md:w-60 shrink-0 ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
       <div className="flex justify-between items-center mb-6 md:hidden">
-        <span className="text-lg font-bold text-cyan-400">Navigation Menu</span>
+        <span className={`text-lg font-bold ${isAdmin ? 'text-purple-400' : 'text-cyan-400'}`}>
+          Navigation Menu
+        </span>
         <button onClick={onCloseSidebar} className="text-gray-400 hover:text-white">
           <X className="w-6 h-6" />
         </button>
       </div>
 
+      {/* User / Admin Profile Card */}
       <div className="mb-6 p-3 rounded-xl bg-slate-900/60 border border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full border border-cyan-400 bg-cyan-950 flex items-center justify-center text-cyan-300 font-bold">
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+          <div
+            className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold ${
+              isAdmin
+                ? 'border-purple-400 bg-purple-950 text-purple-300'
+                : 'border-cyan-400 bg-cyan-950 text-cyan-300'
+            }`}
+          >
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-white truncate">{user?.name || 'Investor'}</p>
-            <p className="text-xs text-cyan-400 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" /> {user?.role === 'admin' ? 'Super Admin' : 'Verified Client'}
+            <p className="text-sm font-bold text-white truncate">{user?.name || 'Administrator'}</p>
+            <p className={`text-xs flex items-center gap-1 ${isAdmin ? 'text-purple-400' : 'text-cyan-400'}`}>
+              <ShieldCheck className="w-3.5 h-3.5" /> {isAdmin ? 'Super Admin' : 'Verified Client'}
             </p>
           </div>
         </div>
       </div>
 
+      {/* Role-Based Navigation */}
       <nav className="space-y-1.5">
         <a href="/" className={inactiveClass}>
-          <Home className="w-5 h-5 text-cyan-400" />
-          <span>Home</span>
+          <div className="flex items-center gap-3">
+            <Home className={`w-5 h-5 ${isAdmin ? 'text-purple-400' : 'text-cyan-400'}`} />
+            <span>Home</span>
+          </div>
         </a>
 
-        <NavLink to="/dashboard" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
-          <Wallet className="w-5 h-5 text-cyan-400" />
-          <span>Assets</span>
-        </NavLink>
+        {isAdmin ? (
+          /* ADMIN MENU TABS */
+          <>
+            <button
+              onClick={() => handleAdminTabClick('overview')}
+              className={activeTab === 'overview' ? activeClass : inactiveClass}
+            >
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="w-5 h-5 text-purple-400" />
+                <span>Executive Overview</span>
+              </div>
+            </button>
 
-        <NavLink to="/transactions" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
-          <FileText className="w-5 h-5 text-cyan-400" />
-          <span>Transactions</span>
-        </NavLink>
+            <button
+              onClick={() => handleAdminTabClick('withdrawals')}
+              className={activeTab === 'withdrawals' ? activeClass : inactiveClass}
+            >
+              <div className="flex items-center gap-3">
+                <Clock className="w-5 h-5 text-amber-400" />
+                <span>Cashout Queue</span>
+              </div>
+              {pendingWithdrawalsCount > 0 && (
+                <span className="bg-amber-500 text-black px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+                  {pendingWithdrawalsCount}
+                </span>
+              )}
+            </button>
 
-        <NavLink to="/profile" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
-          <User className="w-5 h-5 text-cyan-400" />
-          <span>Profile</span>
-        </NavLink>
+            <button
+              onClick={() => handleAdminTabClick('users')}
+              className={activeTab === 'users' ? activeClass : inactiveClass}
+            >
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5 text-cyan-400" />
+                <span>User Directory</span>
+              </div>
+            </button>
 
-        {user?.role === 'admin' && (
-          <NavLink to="/admin" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
-            <ShieldCheck className="w-5 h-5 text-purple-400" />
-            <span>Admin Queue</span>
-          </NavLink>
+            <button
+              onClick={() => handleAdminTabClick('profile')}
+              className={activeTab === 'profile' ? activeClass : inactiveClass}
+            >
+              <div className="flex items-center gap-3">
+                <User className="w-5 h-5 text-emerald-400" />
+                <span>Admin Profile</span>
+              </div>
+            </button>
+          </>
+        ) : (
+          /* STANDARD USER MENU ROUTES */
+          <>
+            <NavLink to="/dashboard" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
+              <Wallet className="w-5 h-5 text-cyan-400" />
+              <span>Assets</span>
+            </NavLink>
+
+            <NavLink to="/transactions" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
+              <FileText className="w-5 h-5 text-cyan-400" />
+              <span>Transactions</span>
+            </NavLink>
+
+            <NavLink to="/profile" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
+              <User className="w-5 h-5 text-cyan-400" />
+              <span>Profile</span>
+            </NavLink>
+          </>
         )}
       </nav>
 
+      {/* Admin Maintenance Control & Logout */}
       <div className="mt-8 pt-6 border-t border-slate-800/80 space-y-2">
-        {user?.role === 'admin' && (
+        {isAdmin && (
           <button
             onClick={() => toggleMaintenanceMode()}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold border transition ${
@@ -110,7 +184,9 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout }) => {
             <Activity className="w-3.5 h-3.5 animate-pulse" /> Active
           </span>
         </div>
-        <p className="text-slate-400">Real-time off-chain ledger & yield engine.</p>
+        <p className="text-slate-400">
+          {isAdmin ? 'Executive financial control suite.' : 'Real-time off-chain ledger & yield engine.'}
+        </p>
       </div>
     </aside>
   );

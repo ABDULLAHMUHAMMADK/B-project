@@ -11,13 +11,15 @@ import {
   Vault,
   Wallet,
   User,
+  Key,
+  Save,
+  CheckCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
 import { useAuthStore } from '../store/useAuthStore';
 import { useSystemStore } from '../store/useSystemStore';
 
-// Common UI Components matching UserDashboard
 import Navbar from '../components/layout/Navbar';
 import Sidebar from '../components/layout/Sidebar';
 import StatCard from '../components/common/StatCard';
@@ -28,14 +30,25 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
-  const { isMaintenanceMode, setMaintenanceMode } = useSystemStore();
+  const updateUser = useAuthStore((state) => state.updateUser);
+  const { isMaintenanceMode, toggleMaintenanceMode } = useSystemStore();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'withdrawals', 'users', 'profile'
   const [toastMsg, setToastMsg] = useState('');
   const [processingId, setProcessingId] = useState(null);
 
-  // 1. Fetch admin statistics & user segmentation data
+  // Admin Profile Form States
+  const [adminName, setAdminName] = useState(user?.name || '');
+  const [adminEmail, setAdminEmail] = useState(user?.email || '');
+  const [savingAdminProfile, setSavingAdminProfile] = useState(false);
+
+  // Admin Password Form States
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // 1. Fetch system metrics & user segmentation details
   const { data: statsData, isLoading: loadingStats } = useQuery({
     queryKey: ['adminStats'],
     queryFn: async () => {
@@ -44,7 +57,7 @@ const AdminDashboard = () => {
     },
   });
 
-  // 2. Fetch pending cashout requests queue
+  // 2. Fetch pending withdrawal requests queue
   const { data: pendingWithdrawals, isLoading: loadingWithdrawals } = useQuery({
     queryKey: ['pendingWithdrawals'],
     queryFn: async () => {
@@ -53,7 +66,7 @@ const AdminDashboard = () => {
     },
   });
 
-  // Withdrawal Approval / Rejection Mutation
+  // Approve / Reject Cashout Request Mutation
   const withdrawalActionMutation = useMutation({
     mutationFn: async ({ id, action }) => {
       setProcessingId(id);
@@ -82,19 +95,51 @@ const AdminDashboard = () => {
     navigate('/login');
   };
 
+  const handleUpdateAdminProfile = async (e) => {
+    e.preventDefault();
+    setSavingAdminProfile(true);
+    try {
+      const res = await axiosInstance.put('/user/profile', { name: adminName, email: adminEmail });
+      if (updateUser && res.data?.data) {
+        updateUser(res.data.data);
+      }
+      showToast('Admin profile updated successfully!');
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Failed to update admin profile');
+    } finally {
+      setSavingAdminProfile(false);
+    }
+  };
+
+  const handleChangeAdminPassword = async (e) => {
+    e.preventDefault();
+    setChangingPassword(true);
+    try {
+      await axiosInstance.put('/user/change-password', {
+        currentPassword,
+        newPassword,
+      });
+      showToast('Admin password changed successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (err) {
+      showToast(err.response?.data?.error || 'Failed to change admin password');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const metrics = statsData?.metrics;
   const userList = statsData?.userInvestmentDetails || [];
 
   return (
     <div className="min-h-screen bg-[#060a12] text-slate-100 flex flex-col relative pb-20 md:pb-6">
-      {/* Navbar Header */}
       <Navbar
         onMobileSidebarToggle={() => setSidebarOpen(true)}
         onOpenNotifications={() => showToast('No new notifications')}
       />
 
       <div className="max-w-7xl mx-auto w-full flex gap-6 px-4 py-6 md:px-8 flex-1">
-        {/* Sidebar Component */}
         <Sidebar
           isOpen={sidebarOpen}
           onCloseSidebar={() => setSidebarOpen(false)}
@@ -105,7 +150,7 @@ const AdminDashboard = () => {
         />
 
         <main className="flex-1 min-w-0">
-          {/* Top Hero Banner */}
+          {/* Header Banner */}
           <div className="relative overflow-hidden rounded-2xl neon-card p-6 mb-6 border border-purple-500/30">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
@@ -116,11 +161,13 @@ const AdminDashboard = () => {
                 <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-2">
                   <ShieldCheck className="w-7 h-7 text-purple-400" /> Executive Control Center
                 </h1>
-                <p className="text-xs md:text-sm text-slate-400 mt-1">Live overview of platform liquidity, fee collections, user balances, and cashout approvals.</p>
+                <p className="text-xs md:text-sm text-slate-400 mt-1">
+                  Live platform liquidity overview, fee revenue audit, user directory, and cashout queue management.
+                </p>
               </div>
 
               <button
-                onClick={() => setMaintenanceMode(!isMaintenanceMode)}
+                onClick={() => toggleMaintenanceMode()}
                 className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border transition ${
                   isMaintenanceMode
                     ? 'bg-rose-950/80 border-rose-800 text-rose-300'
@@ -133,7 +180,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* TAB 1: OVERVIEW METRICS */}
+          {/* TAB 1: EXECUTIVE OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -202,10 +249,12 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB 2: CASHOUT APPROVAL QUEUE */}
+          {/* TAB 2: CASHOUT REQUESTS QUEUE */}
           {activeTab === 'withdrawals' && (
             <div className="neon-card p-6 rounded-2xl">
-              <h3 className="text-base font-bold text-white mb-4">Pending Cashout Requests Queue</h3>
+              <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                Pending Cashout Requests Queue
+              </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
@@ -261,10 +310,12 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB 3: USER DIRECTORY & THRESHOLD DEFICIT */}
+          {/* TAB 3: USER DIRECTORY */}
           {activeTab === 'users' && (
             <div className="neon-card p-6 rounded-2xl">
-              <h3 className="text-base font-bold text-white mb-4">User Investment Directory & Threshold Status</h3>
+              <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                User Directory & Threshold Deficits
+              </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
@@ -323,44 +374,106 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB 4: PROFILE SETTINGS */}
+          {/* TAB 4: ADMIN PROFILE SETTINGS */}
           {activeTab === 'profile' && (
-            <div className="neon-card p-6 rounded-2xl max-w-2xl">
-              <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-purple-400" /> Admin Profile Settings
-              </h3>
-              <div className="space-y-4 text-xs">
-                <div>
-                  <label className="block text-slate-400 mb-1 font-semibold">Administrator Name</label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={user?.name || 'Administrator'}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-semibold focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1 font-semibold">Email Address</label>
-                  <input
-                    type="email"
-                    readOnly
-                    value={user?.email || 'admin@tradeyield.io'}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-semibold focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1 font-semibold">Security Role</label>
-                  <div className="inline-block bg-purple-950 text-purple-300 border border-purple-800 px-3 py-1 rounded-full text-[11px] font-bold">
-                    Super Admin Access
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="neon-card p-6 rounded-2xl">
+                <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                  <User className="w-5 h-5 text-purple-400" /> Admin Credentials
+                </h3>
+
+                <form onSubmit={handleUpdateAdminProfile} className="space-y-4 text-xs">
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Administrator Name</label>
+                    <input
+                      type="text"
+                      value={adminName}
+                      onChange={(e) => setAdminName(e.target.value)}
+                      required
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-semibold focus:outline-none focus:border-purple-500"
+                    />
                   </div>
-                </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Email Address</label>
+                    <input
+                      type="email"
+                      value={adminEmail}
+                      onChange={(e) => setAdminEmail(e.target.value)}
+                      required
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-semibold focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Security Level</label>
+                    <div className="inline-block bg-purple-950 text-purple-300 border border-purple-800 px-3 py-1 rounded-full text-[11px] font-bold">
+                      Super Admin Privileges
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={savingAdminProfile}
+                    className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition flex items-center justify-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{savingAdminProfile ? 'Saving...' : 'Save Profile'}</span>
+                  </button>
+                </form>
+              </div>
+
+              <div className="neon-card p-6 rounded-2xl">
+                <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                  <Key className="w-5 h-5 text-amber-400" /> Security & Password
+                </h3>
+
+                <form onSubmit={handleChangeAdminPassword} className="space-y-4 text-xs">
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">Current Password</label>
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      required
+                      placeholder="Enter current password"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-semibold">New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      placeholder="Enter new password (min 6 chars)"
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] text-slate-400 flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Passwords must be at least 6 characters.</span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={changingPassword}
+                    className="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold transition flex items-center justify-center gap-2"
+                  >
+                    <Key className="w-4 h-4" />
+                    <span>{changingPassword ? 'Updating...' : 'Update Password'}</span>
+                  </button>
+                </form>
               </div>
             </div>
           )}
         </main>
       </div>
 
-      {/* Floating Toast Notification */}
       <Toast message={toastMsg} />
     </div>
   );
