@@ -9,8 +9,11 @@ import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import TransactionsPage from './pages/TransactionsPage';
 import ProfilePage from './pages/ProfilePage';
+import { useAuthStore } from './store/useAuthStore';
 
 function App() {
+  const { isAuthenticated, role } = useAuthStore();
+
   return (
     <Routes>
       {/* Public Landing Page */}
@@ -20,20 +23,31 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Protected User Dashboard Routes */}
-      <Route element={<ProtectedRoute allowedRoles={['user', 'admin']} />}>
+      {/* Protected User Dashboard Routes (Strictly 'user' role) */}
+      <Route element={<ProtectedRoute allowedRoles={['user']} />}>
         <Route path="/dashboard" element={<UserDashboard />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
 
-      {/* Protected Admin Routes */}
+      {/* Protected Admin Routes (Strictly 'admin' role) */}
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route path="/admin" element={<AdminDashboard />} />
       </Route>
 
-      {/* Fallback Redirect to Landing Page */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Smart Fallback Redirect based on Authentication & Role */}
+      <Route
+        path="*"
+        element={
+          !isAuthenticated ? (
+            <Navigate to="/" replace />
+          ) : role === 'admin' ? (
+            <Navigate to="/admin" replace />
+          ) : (
+            <Navigate to="/dashboard" replace />
+          )
+        }
+      />
     </Routes>
   );
 }

@@ -14,9 +14,19 @@ import {
   Lock,
   Globe,
 } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
 import MarketOverviewWidget from '../components/dashboard/MarketOverviewWidget';
 
 const LandingPage = () => {
+  const { isAuthenticated, role } = useAuthStore();
+
+  // Smart Role-Based Portal Path Resolution
+  const portalPath = !isAuthenticated
+    ? '/login'
+    : role === 'admin'
+    ? '/admin'
+    : '/dashboard';
+
   return (
     <div className="min-h-screen bg-[#060a12] text-slate-100 flex flex-col font-sans">
       {/* 1. Header Navigation */}
@@ -39,19 +49,31 @@ const LandingPage = () => {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link
-              to="/login"
-              className="px-4 py-2 rounded-xl text-xs font-bold border border-cyan-800 text-cyan-300 hover:bg-cyan-950/50 transition"
-            >
-              Sign In
-            </Link>
-            <Link
-              to="/register"
-              className="btn-neon-primary px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
-            >
-              <span>Get Started</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            {isAuthenticated ? (
+              <Link
+                to={portalPath}
+                className="btn-neon-primary px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
+              >
+                <span>{role === 'admin' ? 'Executive Portal' : 'Go to Dashboard'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 rounded-xl text-xs font-bold border border-cyan-800 text-cyan-300 hover:bg-cyan-950/50 transition"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="btn-neon-primary px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                >
+                  <span>Get Started</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -72,18 +94,18 @@ const LandingPage = () => {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              to="/register"
+              to={isAuthenticated ? portalPath : '/register'}
               className="btn-neon-primary w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
             >
-              <span>Start Investing ($300 Min)</span>
+              <span>{isAuthenticated ? 'Open Portal' : 'Start Investing ($300 Min)'}</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              to="/dashboard"
+              to={portalPath}
               className="btn-neon-outline w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
             >
               <BarChart2 className="w-4 h-4" />
-              <span>Access Client Portal</span>
+              <span>{role === 'admin' ? 'Access Executive Center' : 'Access Client Portal'}</span>
             </Link>
           </div>
         </div>
@@ -306,8 +328,7 @@ const LandingPage = () => {
           </div>
 
           <div className="flex items-center gap-6">
-            <Link to="/login" className="hover:text-cyan-400 transition">Sign In</Link>
-            <Link to="/register" className="hover:text-cyan-400 transition">Register</Link>
+            <Link to={portalPath} className="hover:text-cyan-400 transition">Portal</Link>
             <a href="#policy" className="hover:text-cyan-400 transition">Policy</a>
           </div>
         </div>

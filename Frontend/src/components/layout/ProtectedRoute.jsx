@@ -18,12 +18,12 @@ const ProtectedRoute = ({ allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // 2. Global Maintenance Mode Active -> Block regular users
+  // 2. Global Maintenance Mode Active -> Block non-admin users
   if (isMaintenanceMode && role !== 'admin') {
     return <MaintenanceOverlay />;
   }
 
-  // 3. Unauthorized Role -> Redirect based on user privilege
+  // 3. Unauthorized Role -> Redirect strictly according to role privileges
   if (allowedRoles && !allowedRoles.includes(role)) {
     return role === 'admin' ? <Navigate to="/admin" replace /> : <Navigate to="/dashboard" replace />;
   }
