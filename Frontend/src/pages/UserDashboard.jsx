@@ -1,3 +1,4 @@
+// src/pages/UserDashboard.jsx
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -7,6 +8,9 @@ import {
   Wallet,
   PlusCircle,
   ArrowUpRight,
+  Copy,
+  Check,
+  Share2,
 } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js';
 
@@ -24,7 +28,6 @@ import ErrorBoundary from '../components/common/ErrorBoundary';
 
 // Dashboard Specific Components
 import GrowthChart from '../components/dashboard/GrowthChart';
-import LedgerTable from '../components/dashboard/LedgerTable';
 import MarketOverviewWidget from '../components/dashboard/MarketOverviewWidget';
 
 // Modals
@@ -41,9 +44,11 @@ const UserDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [activeChartFilter, setActiveChartFilter] = useState('7D');
 
+  // 1. Fetch live user wallet details
   const { data: wallet } = useQuery({
     queryKey: ['wallet'],
     queryFn: async () => {
@@ -52,6 +57,16 @@ const UserDashboard = () => {
     },
   });
 
+  // 2. Fetch referral tree data & commission details
+  const { data: referralData } = useQuery({
+    queryKey: ['referrals'],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/referrals/my-tree');
+      return res.data.data;
+    },
+  });
+
+  // 3. Real-time WebSockets
   useEffect(() => {
     const socket = initSocket();
 
@@ -77,6 +92,14 @@ const UserDashboard = () => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(''), 3500);
   }, []);
+
+  const handleCopyReferral = () => {
+    const link = `https://tradeyield.io/register?ref=${referralData?.referralCode || user?.referralCode || ''}`;
+    navigator.clipboard.writeText(link);
+    setCopied(true);
+    showToast('Referral invitation link copied to clipboard!');
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const mainBalance = wallet?.mainBalance || 0;
   const profitBalance = wallet?.profitBalance || 0;
@@ -127,6 +150,7 @@ const UserDashboard = () => {
         />
 
         <main className="flex-1 min-w-0">
+          {/* Top Hero Banner */}
           <div className="relative overflow-hidden rounded-2xl neon-card p-6 mb-6 border border-cyan-500/30">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
@@ -156,6 +180,7 @@ const UserDashboard = () => {
             </div>
           </div>
 
+          {/* 4 Core Financial Stat Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatCard
               title="Total Investment"
@@ -194,19 +219,62 @@ const UserDashboard = () => {
             />
           </div>
 
+          {/* Live Streaming Market Ticker Widget */}
           <MarketOverviewWidget />
 
-          <div className="mb-6">
-            <ErrorBoundary>
-              <GrowthChart
-                chartData={chartData}
-                activeFilter={activeChartFilter}
-                onFilterChange={setActiveChartFilter}
-              />
-            </ErrorBoundary>
-          </div>
+          {/* Growth Chart & Referral System Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <ErrorBoundary>
+                <GrowthChart
+                  chartData={chartData}
+                  activeFilter={activeChartFilter}
+                  onFilterChange={setActiveChartFilter}
+                />
+              </ErrorBoundary>
+            </div>
 
-          <LedgerTable transactions={wallet?.history || []} />
+            {/* Referral System Section */}
+            <div id="referrals" className="neon-card p-5 rounded-2xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Share2 className="w-4 h-4 text-blue-400" /> Referral System
+                  </h3>
+                  <span className="text-xs bg-blue-950 text-blue-300 px-2 py-0.5 rounded-full border border-blue-800">$50 Flat Bonus</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  Share your personal link. Earn a solid $50 USDT direct bonus + $0.20 daily passive rewards when referred clients hold $300+ for 24h.
+                </p>
+
+                <div className="mb-4">
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Your Referral Link</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={`https://tradeyield.io/register?ref=${referralData?.referralCode || user?.referralCode || ''}`}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-cyan-300 font-mono focus:outline-none"
+                    />
+                    <button onClick={handleCopyReferral} className="btn-neon-primary px-4 py-2 rounded-xl text-xs font-bold shrink-0 flex items-center gap-1">
+                      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />} Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800">
+                <div className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 text-center">
+                  <span className="block text-[11px] text-slate-400">Total Referred</span>
+                  <span className="text-lg font-bold text-white">{referralData?.totalReferredUsers || 0} Users</span>
+                </div>
+                <div className="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800 text-center">
+                  <span className="block text-[11px] text-slate-400">Earned Balance</span>
+                  <span className="text-lg font-bold text-emerald-400">${referralBalance.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </main>
       </div>
 

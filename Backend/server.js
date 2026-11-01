@@ -1,3 +1,4 @@
+// Backend/server.js
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -15,7 +16,6 @@ import webhookRoutes from './src/routes/webhookRoutes.js';
 import withdrawalRoutes from './src/routes/withdrawalRoutes.js';
 import adminRoutes from './src/routes/adminRoutes.js';
 import referralRoutes from './src/routes/referralRoutes.js';
-import userRoutes from './src/routes/userRoutes.js';
 import errorHandler from './src/middleware/errorHandler.js';
 import { initYieldCron } from './src/jobs/yieldCron.js';
 import stripeTestRoutes from './src/routes/stripeTestRoutes.js';
@@ -23,84 +23,69 @@ import { handleStripeTestWebhook } from './src/controllers/stripeTestWebhookCont
 
 dotenv.config();
 
+// Connect to MongoDB Atlas
+connectDB();
+
 const app = express();
-const isVercel = process.env.VERCEL === '1';
 
-app.set('trust proxy', 1);
+// 1. Universal Dynamic CORS Handling
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
 
-/* ------------------------------ CORS ------------------------------ */
-// Comma-separated list in env, e.g.
-// CLIENT_URLS=https://your-frontend.vercel.app,https://yourdomain.com,http://localhost:5173
-const allowedOrigins = (process.env.CLIENT_URLS || '')
-  .split(',')
-  .map((o) => o.trim().replace(/\/$/, ''))
-  .filter(Boolean);
+  // Echo back requesting origin to allow dynamic cross-origin credentials on Vercel
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
 
-const corsOptions = {
-  origin: (origin, cb) => {
-    // No origin = server-to-server (Stripe webhooks), curl, Postman
-    if (!origin) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    return cb(null, false); // not allowed: no CORS headers are sent
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  maxAge: 86400,
-};
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
 
-// cors() also answers OPTIONS preflight requests automatically
-app.use(cors(corsOptions));
+  // Instantly resolve browser preflight OPTIONS checks
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-/* ---------------------------- Security ---------------------------- */
+  next();
+});
+
+// 2. Enable Security HTTP Headers
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
   })
 );
 
-/* --------------------------- Health check -------------------------- */
-// Placed before the DB middleware so it works even if the DB is down
-app.get('/', (req, res) => {
-  res.send({ status: 'API is running securely...' });
-});
-
-/* ------------------- Ensure DB is connected first ------------------ */
-app.use(async (req, res, next) => {
-  if (req.method === 'OPTIONS') return next();
-  try {
-    await connectDB();
-    next();
-  } catch (err) {
-    console.error('DB connection failed:', err.message);
-    res.status(503).json({
-      success: false,
-      error: 'Service temporarily unavailable. Please try again.',
-    });
-  }
-});
-
-/* ------------------------ Stripe raw webhook ----------------------- */
-// Must come BEFORE express.json()
+// 3. STRIPE WEBHOOK ROUTE (Must be mounted BEFORE express.json() for signature verification)
 app.post(
   '/api/test-stripe/webhook',
   express.raw({ type: 'application/json' }),
   handleStripeTestWebhook
 );
 
-/* ---------------------------- Body parsing ------------------------- */
+// 4. Express Body Parser (For standard JSON routes)
 app.use(express.json({ limit: '10kb' }));
 
+// 5. Custom NoSQL Injection Sanitizer
 app.use((req, res, next) => {
   if (req.body) {
     req.body = mongoSanitize.sanitize(req.body, { replaceWith: '_' });
   }
+  if (req.params) {
+    req.params = mongoSanitize.sanitize(req.params, { replaceWith: '_' });
+  }
   next();
 });
 
+// 6. Prevent HTTP Parameter Pollution
 app.use(hpp());
 
-/* --------------------------- Rate limiting ------------------------- */
+// 7. Rate Limiters
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 200,
@@ -113,15 +98,12 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 50,
   message: { success: false, error: 'Too many auth attempts. Try again in 15 mins.' },
-  standardHeaders: true,
-  legacyHeaders: false,
 });
 
 app.use('/api', generalLimiter);
 
-/* ------------------------------ Routes ----------------------------- */
+// 8. Mount API Routes
 app.use('/api/auth', authLimiter, authRoutes);
-app.use('/api/user', userRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/deposits', depositRoutes);
 app.use('/api/webhooks', webhookRoutes);
@@ -130,24 +112,21 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/test-stripe', stripeTestRoutes);
 
+// Health Check
+app.get('/', (req, res) => {
+  res.send({ status: 'API is running securely...' });
+});
+
+// Global Error Handler Middleware
 app.use(errorHandler);
 
-/* ------------------------ Start (non-serverless) ------------------- */
-// On Vercel the platform handles listening; cron jobs don't run reliably there.
-if (!isVercel) {
-  const PORT = process.env.PORT || 5000;
+// Initialize Daily Yield Cron Scheduler
+initYieldCron();
 
-  connectDB()
-    .then(() => {
-      initYieldCron(); // only start cron once the DB is ready, on a persistent server
-      app.listen(PORT, () => {
-        console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-      });
-    })
-    .catch((err) => {
-      console.error('Failed to start server:', err.message);
-      process.exit(1);
-    });
-}
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+});
 
 export default app;
