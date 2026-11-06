@@ -1,13 +1,13 @@
 // src/components/layout/Navbar.jsx
 import React, { memo } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, MessageSquare, Menu, ExternalLink } from 'lucide-react';
+import { TrendingUp, Bell, MessageSquare, Menu, ExternalLink } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
-const Navbar = memo(({ onMobileSidebarToggle }) => {
+const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
   const user = useAuthStore((state) => state.user);
 
-  // Replace this with your actual Telegram or WhatsApp group URL
+  // Replace this with your official Telegram or WhatsApp group URL
   const COMMUNITY_GROUP_URL = 'https://t.me/your_official_telegram_group';
 
   return (
@@ -22,7 +22,7 @@ const Navbar = memo(({ onMobileSidebarToggle }) => {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Clicking Logo or Name Redirects to Main Landing Page */}
+          {/* Clicking Logo or Brand Name Redirects to Main Landing Page */}
           <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
               <TrendingUp className="w-5 h-5 text-white" />
@@ -38,22 +38,32 @@ const Navbar = memo(({ onMobileSidebarToggle }) => {
           </Link>
         </div>
 
-        {/* Right Community Link & User Info */}
-        <div className="flex items-center gap-4">
-          {/* Telegram / WhatsApp Official Community Button */}
+        {/* Right Community Link, Notifications & User Info */}
+        <div className="flex items-center gap-3">
+          {/* 1. Official Community Group Button (Telegram / WhatsApp) */}
           <a
             href={COMMUNITY_GROUP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="relative p-2.5 rounded-xl bg-slate-900/80 text-cyan-400 hover:text-white hover:bg-cyan-950/60 border border-slate-800 transition flex items-center gap-1.5 text-xs font-bold"
-            title="Join Official Telegram Community"
+            className="relative p-2 rounded-xl bg-slate-900/80 text-cyan-400 hover:text-white hover:bg-cyan-950/60 border border-slate-800 transition flex items-center gap-1.5 text-xs font-bold"
+            title="Join Official Community Group"
           >
             <MessageSquare className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">Community</span>
+            <span className="hidden sm:inline">Group</span>
             <ExternalLink className="w-3 h-3 text-slate-400" />
           </a>
 
-          {/* User Profile Summary */}
+          {/* 2. Notification Bell Icon */}
+          <button
+            onClick={onOpenNotifications}
+            className="relative p-2 rounded-xl bg-slate-900/80 text-gray-300 hover:text-cyan-400 border border-slate-800 transition"
+            title="Notifications"
+          >
+            <Bell className="w-5 h-5" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          </button>
+
+          {/* 3. User Account Summary */}
           <div className="flex items-center gap-3 pl-3 border-l border-slate-800">
             <div className="relative">
               <div className="w-10 h-10 rounded-full border-2 border-cyan-400 bg-slate-800 flex items-center justify-center text-cyan-300 font-bold text-sm shadow-md shadow-cyan-500/20">

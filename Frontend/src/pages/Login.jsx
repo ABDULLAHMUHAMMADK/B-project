@@ -33,14 +33,15 @@ const Login = () => {
 
       setAuth({ user, token });
 
+      // Role-Based Redirection: Admins land on /admin, Investors land on /dashboard-home
       if (user.role === 'admin') {
         navigate('/admin', { replace: true });
       } else {
-        navigate('/dashboard', { replace: true });
+        navigate('/dashboard-home', { replace: true });
       }
     } catch (err) {
-      console.log(err)
-      setError(err.response?.data?.error );
+      console.log(err);
+      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -53,14 +54,16 @@ const Login = () => {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="neon-card bg-[#0b1322]/90 max-w-md w-full p-8 rounded-2xl relative border border-cyan-500/30 shadow-2xl z-10">
-        {/* Branding Header */}
+        {/* Branding Header -> Clicking logo/name redirects to Main Landing Page */}
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/30 mb-3">
-            <TrendingUp className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-wide">
-            Trade<span className="text-cyan-400">Yield</span>
-          </h1>
+          <Link to="/" className="inline-block hover:opacity-90 transition">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/30 mb-3">
+              <TrendingUp className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="text-2xl font-extrabold text-white tracking-wide">
+              Trade<span className="text-cyan-400">Yield</span>
+            </h1>
+          </Link>
           <p className="text-xs text-slate-400 mt-1">Sign in to your managed investment portal</p>
         </div>
 
