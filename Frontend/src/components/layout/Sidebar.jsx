@@ -2,13 +2,12 @@
 import React, { memo } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Home,
-  Wallet,
+  UserCheck,
+  Users,
   FileText,
-  User,
   ShieldCheck,
   Clock,
-  Users,
+  User,
   LogOut,
   X,
   Activity,
@@ -76,13 +75,6 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
 
       {/* Role-Based Navigation */}
       <nav className="space-y-1.5">
-        <a href="/" className={inactiveClass}>
-          <div className="flex items-center gap-3">
-            <Home className={`w-5 h-5 ${isAdmin ? 'text-purple-400' : 'text-cyan-400'}`} />
-            <span>Home</span>
-          </div>
-        </a>
-
         {isAdmin ? (
           /* ADMIN MENU TABS */
           <>
@@ -132,21 +124,21 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
             </button>
           </>
         ) : (
-          /* STANDARD USER MENU ROUTES */
+          /* SIDEBAR HAS 3 PAGES (Responsive Desktop & Mobile Drawer) */
           <>
-            <NavLink to="/dashboard" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
-              <Wallet className="w-5 h-5 text-cyan-400" />
-              <span>Assets</span>
+            <NavLink to="/verification" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
+              <UserCheck className="w-5 h-5 text-cyan-400" />
+              <span>Verification</span>
             </NavLink>
 
-            <NavLink to="/transactions" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
+            <NavLink to="/referrals-page" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
+              <Users className="w-5 h-5 text-cyan-400" />
+              <span>Referral</span>
+            </NavLink>
+
+            <NavLink to="/terms-policy" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
               <FileText className="w-5 h-5 text-cyan-400" />
-              <span>Transactions</span>
-            </NavLink>
-
-            <NavLink to="/profile" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
-              <User className="w-5 h-5 text-cyan-400" />
-              <span>Profile</span>
+              <span>Terms & Policy</span>
             </NavLink>
           </>
         )}

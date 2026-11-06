@@ -5,10 +5,15 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import UserHomePage from './pages/UserHomePage';
 import UserDashboard from './pages/UserDashboard';
-import AdminDashboard from './pages/AdminDashboard';
+import MarketPage from './pages/MarketPage';
 import TransactionsPage from './pages/TransactionsPage';
 import ProfilePage from './pages/ProfilePage';
+import VerificationPage from './pages/VerificationPage';
+import ReferralsPage from './pages/ReferralsPage';
+import TermsPolicyPage from './pages/TermsPolicyPage';
+import AdminDashboard from './pages/AdminDashboard';
 import { useAuthStore } from './store/useAuthStore';
 
 function App() {
@@ -23,19 +28,24 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Protected User Dashboard Routes (Strictly 'user' role) */}
+      {/* Protected User Dashboard Routes */}
       <Route element={<ProtectedRoute allowedRoles={['user']} />}>
+        <Route path="/dashboard-home" element={<UserHomePage />} />
         <Route path="/dashboard" element={<UserDashboard />} />
+        <Route path="/market" element={<MarketPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/verification" element={<VerificationPage />} />
+        <Route path="/referrals-page" element={<ReferralsPage />} />
+        <Route path="/terms-policy" element={<TermsPolicyPage />} />
       </Route>
 
-      {/* Protected Admin Routes (Strictly 'admin' role) */}
+      {/* Protected Admin Routes */}
       <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route path="/admin" element={<AdminDashboard />} />
       </Route>
 
-      {/* Smart Fallback Redirect based on Authentication & Role */}
+      {/* Smart Fallback Redirect based on Role */}
       <Route
         path="*"
         element={
@@ -44,7 +54,7 @@ function App() {
           ) : role === 'admin' ? (
             <Navigate to="/admin" replace />
           ) : (
-            <Navigate to="/dashboard" replace />
+            <Navigate to="/dashboard-home" replace />
           )
         }
       />
