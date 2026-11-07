@@ -5,6 +5,7 @@ import {
   UserCheck,
   Users,
   FileText,
+  Info,
   ShieldCheck,
   Clock,
   User,
@@ -124,21 +125,30 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
             </button>
           </>
         ) : (
-          /* SIDEBAR HAS 3 PAGES (Responsive Desktop & Mobile Drawer) */
+          /* USER SIDEBAR MENU (Reordered as requested) */
           <>
+            {/* 1. Verification */}
             <NavLink to="/verification" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
               <UserCheck className="w-5 h-5 text-cyan-400" />
               <span>Verification</span>
             </NavLink>
 
+            {/* 2. Referral */}
             <NavLink to="/referrals-page" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
               <Users className="w-5 h-5 text-cyan-400" />
               <span>Referral</span>
             </NavLink>
 
+            {/* 3. Terms & Policy */}
             <NavLink to="/terms-policy" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
               <FileText className="w-5 h-5 text-cyan-400" />
               <span>Terms & Policy</span>
+            </NavLink>
+
+            {/* 4. About Us */}
+            <NavLink to="/about-us" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
+              <Info className="w-5 h-5 text-cyan-400" />
+              <span>About Us</span>
             </NavLink>
           </>
         )}

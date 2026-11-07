@@ -13,6 +13,7 @@ import ProfilePage from './pages/ProfilePage';
 import VerificationPage from './pages/VerificationPage';
 import ReferralsPage from './pages/ReferralsPage';
 import TermsPolicyPage from './pages/TermsPolicyPage';
+import AboutUsPage from './pages/AboutUsPage';
 import AdminDashboard from './pages/AdminDashboard';
 import { useAuthStore } from './store/useAuthStore';
 
@@ -35,6 +36,7 @@ function App() {
         <Route path="/market" element={<MarketPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/about-us" element={<AboutUsPage />} />
         <Route path="/verification" element={<VerificationPage />} />
         <Route path="/referrals-page" element={<ReferralsPage />} />
         <Route path="/terms-policy" element={<TermsPolicyPage />} />
