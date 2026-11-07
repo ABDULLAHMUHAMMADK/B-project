@@ -1,5 +1,5 @@
 // src/pages/LandingPage.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   TrendingUp,
@@ -13,6 +13,10 @@ import {
   AlertTriangle,
   Lock,
   Globe,
+  ChevronLeft,
+  ChevronRight,
+  Cpu,
+  Flame,
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import MarketOverviewWidget from '../components/dashboard/MarketOverviewWidget';
@@ -20,12 +24,77 @@ import MarketOverviewWidget from '../components/dashboard/MarketOverviewWidget';
 const LandingPage = () => {
   const { isAuthenticated, role } = useAuthStore();
 
-  // Smart Role-Based Portal Path Resolution
   const portalPath = !isAuthenticated
     ? '/login'
     : role === 'admin'
     ? '/admin'
-    : '/dashboard';
+    : '/dashboard-home';
+
+  // Interactive Carousel State
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const carouselCards = [
+    {
+      id: 1,
+      title: 'Institutional Multi-Asset Engine',
+      subtitle: 'Automated Forex, Gold & Crypto Trading',
+      description: 'Monexafx Exchange provides seamless access to institutional liquidity pools across XAUUSD Gold, major Currency Pairs, and USDT yield engines.',
+      badge: 'High Performance',
+      gradient: 'from-cyan-900/80 via-blue-900/60 to-slate-900',
+      border: 'border-cyan-500/40',
+      icon: Cpu,
+      accent: 'text-cyan-400',
+    },
+    {
+      id: 2,
+      title: 'Guaranteed 1% Daily Yield',
+      subtitle: '24-Hour Automated Ledger Activation',
+      description: 'Participate in our structured capital program. Enjoy fixed daily compounding yield credited directly after a 24-hour setup period.',
+      badge: 'Promised Return',
+      gradient: 'from-emerald-950/80 via-slate-900 to-teal-950/60',
+      border: 'border-emerald-500/40',
+      icon: DollarSign,
+      accent: 'text-emerald-400',
+    },
+    {
+      id: 3,
+      title: 'Direct $50 Referral Rewards',
+      subtitle: 'Flat Direct Sponsor Payouts',
+      description: 'Invite new investors to Monexafx Exchange. Earn a $50 USDT flat cash bonus plus $0.20 daily passive payments for qualifying $300+ deposits.',
+      badge: 'Network Growth',
+      gradient: 'from-purple-950/80 via-slate-900 to-indigo-950/60',
+      border: 'border-purple-500/40',
+      icon: Users,
+      accent: 'text-purple-400',
+    },
+    {
+      id: 4,
+      title: 'Fast Binance Payout Gateways',
+      subtitle: 'TRON (TRC20) USDT Cashouts',
+      description: 'Execute instant withdrawal requests processed directly to your personal Binance Pay ID or web3 TRC20 wallet within 1 to 30 minutes.',
+      badge: 'Instant Liquidity',
+      gradient: 'from-amber-950/80 via-slate-900 to-orange-950/60',
+      border: 'border-amber-500/40',
+      icon: Flame,
+      accent: 'text-amber-400',
+    },
+  ];
+
+  // Auto-slide effect every 4.5 seconds
+  useEffect(() => {
+    const slideInterval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % carouselCards.length);
+    }, 4500);
+    return () => clearInterval(slideInterval);
+  }, [carouselCards.length]);
+
+  const handlePrevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + carouselCards.length) % carouselCards.length);
+  };
+
+  const handleNextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % carouselCards.length);
+  };
 
   return (
     <div className="min-h-screen bg-[#060a12] text-slate-100 flex flex-col font-sans">
@@ -37,7 +106,7 @@ const LandingPage = () => {
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
             <span className="text-2xl font-extrabold tracking-wide text-white">
-              Trade<span className="text-cyan-400">Yield</span>
+              Monexafx <span className="text-cyan-400">Exchange</span>
             </span>
           </Link>
 
@@ -79,20 +148,80 @@ const LandingPage = () => {
       </header>
 
       {/* 2. Hero Section */}
-      <section className="relative overflow-hidden pt-12 pb-16 px-4 md:px-8 max-w-7xl mx-auto w-full">
-        <div className="text-center max-w-3xl mx-auto mb-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-950/80 border border-cyan-800 text-cyan-300 text-xs font-bold mb-6">
+      <section className="relative overflow-hidden pt-10 pb-16 px-4 md:px-8 max-w-7xl mx-auto w-full">
+        <div className="text-center max-w-4xl mx-auto mb-8">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-950/80 border border-cyan-800 text-cyan-300 text-xs font-bold mb-4">
             <Zap className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-            <span>Institutional Multi-Asset Yield Engine</span>
+            <span>Welcome to Monexafx Exchange</span>
           </div>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
             Automated Crypto, Forex & Gold Yield Trading
           </h1>
-          <p className="text-sm md:text-base text-slate-400 leading-relaxed mb-8">
-            TradeYield provides transparent access to global financial markets. Participate in our capital program featuring a promised 1% daily return, automated 24-hour activation, and direct Binance payouts.
-          </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          {/* Interactive Auto-Changing Card Carousel */}
+          <div className="relative max-w-3xl mx-auto my-6">
+            <div className="overflow-hidden rounded-2xl relative shadow-2xl">
+              <div
+                className="flex transition-transform duration-700 ease-in-out"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+              >
+                {carouselCards.map((card) => {
+                  const IconComp = card.icon;
+                  return (
+                    <div
+                      key={card.id}
+                      className={`w-full shrink-0 p-6 md:p-8 rounded-2xl bg-gradient-to-br ${card.gradient} border ${card.border} text-left flex flex-col justify-between min-h-[220px]`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className={`text-[11px] font-extrabold uppercase px-3 py-1 rounded-full bg-slate-900/80 border ${card.border} ${card.accent}`}>
+                            {card.badge}
+                          </span>
+                          <IconComp className={`w-6 h-6 ${card.accent}`} />
+                        </div>
+                        <h3 className="text-xl md:text-2xl font-extrabold text-white mb-1">
+                          {card.title}
+                        </h3>
+                        <p className={`text-xs font-bold mb-3 ${card.accent}`}>{card.subtitle}</p>
+                        <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
+                          {card.description}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Carousel Arrow Controls */}
+            <button
+              onClick={handlePrevSlide}
+              className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-950/70 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-900 transition"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleNextSlide}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-950/70 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-900 transition"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+
+            {/* Slide Dots Indicator */}
+            <div className="flex justify-center items-center gap-2 mt-4">
+              {carouselCards.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    currentSlide === index ? 'w-8 bg-cyan-400' : 'w-2 bg-slate-700 hover:bg-slate-500'
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
             <Link
               to={isAuthenticated ? portalPath : '/register'}
               className="btn-neon-primary w-full sm:w-auto px-8 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2"
@@ -129,7 +258,6 @@ const LandingPage = () => {
           </div>
         </div>
 
-        {/* Live Market Ticker */}
         <MarketOverviewWidget />
       </section>
 
@@ -138,9 +266,9 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto">
           <div className="max-w-2xl mb-10">
             <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">Platform Overview</span>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-1">About TradeYield</h2>
+            <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-1">About Monexafx Exchange</h2>
             <p className="text-xs md:text-sm text-slate-400 mt-2 leading-relaxed">
-              TradeYield is a digital investment portal designed to connect retail investors with multi-asset financial trading. Our liquidity management spans major global markets:
+              Monexafx Exchange is a digital investment portal designed to connect retail investors with multi-asset financial trading. Our liquidity management spans major global markets:
             </p>
           </div>
 
@@ -163,13 +291,13 @@ const LandingPage = () => {
             <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
               <Coins className="w-6 h-6 text-emerald-400 mb-2" />
               <h4 className="text-sm font-bold text-white">Referral Engine</h4>
-              <p className="text-xs text-slate-400 mt-1">Two-generation structured reward payouts for direct client referrals.</p>
+              <p className="text-xs text-slate-400 mt-1">Direct sponsor reward payouts ($50 bonus + $0.20 daily).</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 4. Investment Policy & Tiers */}
+      {/* 4. Investment Policy */}
       <section id="policy" className="py-16 px-4 md:px-8 border-t border-slate-800/80">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-10">
@@ -197,11 +325,7 @@ const LandingPage = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     <tr>
-                      <td className="py-2.5 px-3 font-bold text-white">$300 USDT</td>
-                      <td className="py-2.5 px-3 text-right font-extrabold text-emerald-400">1% / day</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-bold text-white">$500 USDT</td>
+                      <td className="py-2.5 px-3 font-bold text-white">$300 USDT (Minimum)</td>
                       <td className="py-2.5 px-3 text-right font-extrabold text-emerald-400">1% / day</td>
                     </tr>
                   </tbody>
@@ -232,98 +356,12 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* 5. Referral Reward System */}
-      <section id="referral" className="py-16 px-4 md:px-8 border-t border-slate-800/80 bg-slate-950/40">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-400">Network Growth</span>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-1">2-Generation Referral Program</h2>
-            <p className="text-xs md:text-sm text-slate-400 mt-2">
-              Earn direct bonus payouts and daily passive rewards by inviting verified investors.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* First Generation */}
-            <div className="neon-card p-6 rounded-2xl border border-blue-500/30">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-400" /> Generation 1 (Direct Referral)
-                </h3>
-                <span className="text-[10px] bg-blue-950 text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-800 font-bold">
-                  Direct Rewards
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                Earn flat cash bonuses and daily passive payments when clients register using your direct referral link.
-              </p>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400">
-                      <th className="py-2.5 px-3">Referred Deposit</th>
-                      <th className="py-2.5 px-3">Direct Bonus</th>
-                      <th className="py-2.5 px-3 text-right">Daily Reward</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    <tr>
-                      <td className="py-2.5 px-3 font-bold text-white">$300 USDT</td>
-                      <td className="py-2.5 px-3 font-bold text-blue-400">$25 USDT</td>
-                      <td className="py-2.5 px-3 text-right font-bold text-emerald-400">$0.20 / day</td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 px-3 font-bold text-white">$500 USDT</td>
-                      <td className="py-2.5 px-3 font-bold text-blue-400">$50 USDT</td>
-                      <td className="py-2.5 px-3 text-right font-bold text-emerald-400">$0.20 / day</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Second Generation */}
-            <div className="neon-card p-6 rounded-2xl border border-purple-500/30">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Users className="w-5 h-5 text-purple-400" /> Generation 2 (Indirect Referral)
-                </h3>
-                <span className="text-[10px] bg-purple-950 text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-800 font-bold">
-                  Direct Sponsor Rule
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                Indirect referrals pass bonuses directly to their immediate sponsor. Higher generations do not accumulate multi-tier passive commissions.
-              </p>
-
-              <div className="p-4 bg-slate-900/80 rounded-xl border border-slate-800 text-xs text-slate-400 space-y-2">
-                <p>• <strong>Strict Direct Reward Rule:</strong> Every user earns referral bonuses exclusively from investors who sign up directly with their link.</p>
-                <p>• <strong>No Multi-Level Override:</strong> Second Generation deposits do not send passive yield overrides to Gen 0 accounts.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. Terms & Risk Disclosure */}
-      <section id="terms" className="py-16 px-4 md:px-8 border-t border-slate-800/80">
-        <div className="max-w-4xl mx-auto bg-rose-950/20 border border-rose-900/40 p-6 md:p-8 rounded-2xl">
-          <h3 className="text-lg font-bold text-rose-300 flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-5 h-5 text-rose-400" /> Risk Disclosure & Compliance Terms
-          </h3>
-          <p className="text-xs text-slate-300 leading-relaxed space-y-2">
-            Trading in financial markets—including Forex, Gold, and Cryptocurrencies—involves substantial risk of capital loss. While TradeYield target payouts are structured around algorithmic strategies, market returns fluctuate. Investors should review platform terms, fee structures, and capital allocation policies before depositing funds.
-          </p>
-        </div>
-      </section>
-
-      {/* 7. Footer */}
+      {/* 5. Footer */}
       <footer className="mt-auto border-t border-slate-800/80 bg-[#04070d] py-8 px-4 md:px-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-cyan-400" />
-            <span className="font-bold text-slate-300">TradeYield Financial Portal</span>
+            <span className="font-bold text-slate-300">Monexafx Exchange Financial Portal</span>
             <span>&copy; {new Date().getFullYear()} All rights reserved.</span>
           </div>
 
