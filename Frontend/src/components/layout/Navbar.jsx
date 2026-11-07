@@ -1,8 +1,10 @@
 // src/components/layout/Navbar.jsx
 import React, { memo } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp, Bell, MessageSquare, Menu, ExternalLink } from 'lucide-react';
+import { Bell, MessageSquare, Menu, ExternalLink } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import LOGO_IMAGE_PATH from '../../assets/logo.jpeg'; // Update this path to your actual logo image
+
 
 const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
   const user = useAuthStore((state) => state.user);
@@ -21,11 +23,24 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Clicking Logo or Brand Name Redirects to Main Landing Page */}
-          <Link to="/" className="flex items-center gap-1.5 sm:gap-2 hover:opacity-90 transition">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/30 shrink-0">
-              <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          {/* Logo Image & Brand Name (Redirects to Landing Page) */}
+          <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition group">
+            {/* Logo Image Container with Responsive Width/Height & Glow Effect */}
+            <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-900/80 border border-cyan-500/30 p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md shadow-cyan-500/20 group-hover:border-cyan-400 transition">
+              <img
+                src={LOGO_IMAGE_PATH}
+                alt="Monexafx Exchange Logo"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  // Fallback placeholder if image path isn't set yet
+                  e.target.style.display = 'none';
+                  e.target.parentNode.innerText = 'M';
+                  e.target.parentNode.className += ' text-cyan-400 font-extrabold text-sm sm:text-base';
+                }}
+              />
             </div>
+
+            {/* Brand Title */}
             <div className="whitespace-nowrap">
               <span className="text-base sm:text-xl font-extrabold tracking-wide text-white">
                 Monexafx <span className="text-cyan-400">Exchange</span>
