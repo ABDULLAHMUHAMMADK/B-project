@@ -65,14 +65,14 @@ const UserHomePage = () => {
                 className="btn-neon-primary px-6 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2"
               >
                 <PlusCircle className="w-4 h-4" />
-                <span>Deposit Funds</span>
+                <span>Deposit</span>
               </button>
               <button
                 onClick={() => setWithdrawOpen(true)}
                 className="btn-neon-outline px-6 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2"
               >
                 <ArrowUpRight className="w-4 h-4 text-emerald-400" />
-                <span>Withdraw Payout</span>
+                <span>Withdraw</span>
               </button>
             </div>
           </div>
