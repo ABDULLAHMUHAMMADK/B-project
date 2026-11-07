@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  TrendingUp,
   ShieldCheck,
   Zap,
   Users,
@@ -20,6 +19,8 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import MarketOverviewWidget from '../components/dashboard/MarketOverviewWidget';
+import LOGO_IMAGE_PATH from '../assets/logo.jpeg'; // Update this path to your actual logo image
+
 
 const LandingPage = () => {
   const { isAuthenticated, role } = useAuthStore();
@@ -30,7 +31,6 @@ const LandingPage = () => {
     ? '/admin'
     : '/dashboard-home';
 
-  // Interactive Carousel State
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const carouselCards = [
@@ -80,7 +80,6 @@ const LandingPage = () => {
     },
   ];
 
-  // Auto-slide effect every 4.5 seconds
   useEffect(() => {
     const slideInterval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % carouselCards.length);
@@ -101,17 +100,27 @@ const LandingPage = () => {
       {/* 1. Header Navigation */}
       <header className="sticky top-0 z-40 bg-[#070c16]/90 backdrop-blur-md border-b border-cyan-900/30 px-3 py-3 sm:px-4 sm:py-4 md:px-8">
         <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
-          {/* Logo Branding */}
-          <Link to="/" className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/30 shrink-0">
-              <TrendingUp className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+          {/* Logo Image & Brand Title */}
+          <Link to="/" className="flex items-center gap-2 shrink-0 group">
+            {/* Image Wrapper with Responsive Sizing */}
+            <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-900/80 border border-cyan-500/30 p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-cyan-500/20 group-hover:border-cyan-400 transition">
+              <img
+                src={LOGO_IMAGE_PATH}
+                alt="Monexafx Exchange Logo"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.parentNode.innerText = 'M';
+                  e.target.parentNode.className += ' text-cyan-400 font-extrabold text-sm sm:text-base';
+                }}
+              />
             </div>
             <span className="text-base sm:text-2xl font-extrabold tracking-wide text-white whitespace-nowrap">
               Monexafx <span className="text-cyan-400">Exchange</span>
             </span>
           </Link>
 
-          {/* Nav Links (Desktop) */}
+          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-300">
             <a href="#about" className="hover:text-cyan-400 transition">About Us</a>
             <a href="#policy" className="hover:text-cyan-400 transition">Investment Policy</a>
@@ -119,7 +128,7 @@ const LandingPage = () => {
             <a href="#terms" className="hover:text-cyan-400 transition">Terms & Risk</a>
           </nav>
 
-          {/* Auth Action Buttons (Single Line Mobile Fix) */}
+          {/* Auth Action Buttons */}
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {isAuthenticated ? (
               <Link
@@ -196,7 +205,7 @@ const LandingPage = () => {
               </div>
             </div>
 
-            {/* Carousel Arrow Controls */}
+            {/* Carousel Controls */}
             <button
               onClick={handlePrevSlide}
               className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-slate-950/70 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-900 transition"
@@ -264,106 +273,10 @@ const LandingPage = () => {
         <MarketOverviewWidget />
       </section>
 
-      {/* 3. About Us Section */}
-      <section id="about" className="py-16 px-4 md:px-8 border-t border-slate-800/80 bg-slate-950/40">
-        <div className="max-w-7xl mx-auto">
-          <div className="max-w-2xl mb-10">
-            <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">Platform Overview</span>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-1">About Monexafx Exchange</h2>
-            <p className="text-xs md:text-sm text-slate-400 mt-2 leading-relaxed">
-              Monexafx Exchange is a digital investment portal designed to connect retail investors with multi-asset financial trading. Our liquidity management spans major global markets:
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
-              <Coins className="w-6 h-6 text-cyan-400 mb-2" />
-              <h4 className="text-sm font-bold text-white">Forex Markets</h4>
-              <p className="text-xs text-slate-400 mt-1">Major currency pairs including EUR/USD, GBP/USD, and USD/JPY.</p>
-            </div>
-            <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
-              <Coins className="w-6 h-6 text-amber-400 mb-2" />
-              <h4 className="text-sm font-bold text-white">Gold (XAUUSD)</h4>
-              <p className="text-xs text-slate-400 mt-1">Precious metals spot trading and high-frequency liquidity arbitrage.</p>
-            </div>
-            <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
-              <Coins className="w-6 h-6 text-purple-400 mb-2" />
-              <h4 className="text-sm font-bold text-white">Cryptocurrency</h4>
-              <p className="text-xs text-slate-400 mt-1">Bitcoin (BTC), Ethereum (ETH), Solana (SOL), and USDT staking pools.</p>
-            </div>
-            <div className="bg-slate-900/60 p-5 rounded-xl border border-slate-800">
-              <Coins className="w-6 h-6 text-emerald-400 mb-2" />
-              <h4 className="text-sm font-bold text-white">Referral Engine</h4>
-              <p className="text-xs text-slate-400 mt-1">Direct sponsor reward payouts ($50 bonus + $0.20 daily).</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. Investment Policy */}
-      <section id="policy" className="py-16 px-4 md:px-8 border-t border-slate-800/80">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">Capital Rules</span>
-            <h2 className="text-2xl md:text-3xl font-extrabold text-white mt-1">Investment Policy & Terms</h2>
-            <p className="text-xs md:text-sm text-slate-400 mt-2">
-              Transparent tier structures, minimum deposit thresholds, and profit activation timelines.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div className="neon-card p-6 rounded-2xl">
-              <h3 className="text-base font-bold text-white mb-4">Minimum Capital Requirements</h3>
-              <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                The minimum initial investment required to activate an account is <strong className="text-cyan-400">$300 USDT</strong>. Deposits accumulate daily returns after an initial 24-hour setup period.
-              </p>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400">
-                      <th className="py-2.5 px-3">Investment Deposit</th>
-                      <th className="py-2.5 px-3 text-right">Promised Daily Return</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    <tr>
-                      <td className="py-2.5 px-3 font-bold text-white">$300 USDT (Minimum)</td>
-                      <td className="py-2.5 px-3 text-right font-extrabold text-emerald-400">1% / day</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-slate-900/60 p-5 rounded-2xl border border-slate-800">
-                <h4 className="text-sm font-bold text-white flex items-center gap-2 mb-2">
-                  <ShieldCheck className="w-4 h-4 text-cyan-400" /> 24-Hour Profit Activation
-                </h4>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Upon deposit confirmation via Binance Pay or blockchain network, a 24-hour ledger setup begins. Daily returns credit automatically at midnight after activation.
-                </p>
-              </div>
-
-              <div className="bg-slate-900/60 p-5 rounded-2xl border border-slate-800">
-                <h4 className="text-sm font-bold text-white flex items-center gap-2 mb-2">
-                  <DollarSign className="w-4 h-4 text-amber-400" /> 20% Withdrawal Fee
-                </h4>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  All cashout payouts carry a standard 20% platform processing fee. For example, a $100 payout yields a net $80 USDT transfer to your Binance Pay ID.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. Footer */}
+      {/* Footer */}
       <footer className="mt-auto border-t border-slate-800/80 bg-[#04070d] py-8 px-4 md:px-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-cyan-400" />
             <span className="font-bold text-slate-300">Monexafx Exchange Financial Portal</span>
             <span>&copy; {new Date().getFullYear()} All rights reserved.</span>
           </div>
