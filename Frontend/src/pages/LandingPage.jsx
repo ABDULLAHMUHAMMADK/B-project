@@ -99,17 +99,19 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-[#060a12] text-slate-100 flex flex-col font-sans">
       {/* 1. Header Navigation */}
-      <header className="sticky top-0 z-40 bg-[#070c16]/90 backdrop-blur-md border-b border-cyan-900/30 px-4 py-4 md:px-8">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/30">
-              <TrendingUp className="w-6 h-6 text-white" />
+      <header className="sticky top-0 z-40 bg-[#070c16]/90 backdrop-blur-md border-b border-cyan-900/30 px-3 py-3 sm:px-4 sm:py-4 md:px-8">
+        <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
+          {/* Logo Branding */}
+          <Link to="/" className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/30 shrink-0">
+              <TrendingUp className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
-            <span className="text-2xl font-extrabold tracking-wide text-white">
+            <span className="text-base sm:text-2xl font-extrabold tracking-wide text-white whitespace-nowrap">
               Monexafx <span className="text-cyan-400">Exchange</span>
             </span>
           </Link>
 
+          {/* Nav Links (Desktop) */}
           <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-300">
             <a href="#about" className="hover:text-cyan-400 transition">About Us</a>
             <a href="#policy" className="hover:text-cyan-400 transition">Investment Policy</a>
@@ -117,29 +119,30 @@ const LandingPage = () => {
             <a href="#terms" className="hover:text-cyan-400 transition">Terms & Risk</a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          {/* Auth Action Buttons (Single Line Mobile Fix) */}
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {isAuthenticated ? (
               <Link
                 to={portalPath}
-                className="btn-neon-primary px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                className="btn-neon-primary px-3 py-1.5 sm:px-5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1 whitespace-nowrap"
               >
                 <span>{role === 'admin' ? 'Executive Portal' : 'Go to Dashboard'}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </Link>
             ) : (
               <>
                 <Link
                   to="/login"
-                  className="px-4 py-2 rounded-xl text-xs font-bold border border-cyan-800 text-cyan-300 hover:bg-cyan-950/50 transition"
+                  className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold border border-cyan-800 text-cyan-300 hover:bg-cyan-950/50 transition whitespace-nowrap"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="btn-neon-primary px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
+                  className="btn-neon-primary px-2.5 py-1.5 sm:px-5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1 whitespace-nowrap"
                 >
                   <span>Get Started</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                 </Link>
               </>
             )}
@@ -154,7 +157,7 @@ const LandingPage = () => {
             <Zap className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
             <span>Welcome to Monexafx Exchange</span>
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
             Automated Crypto, Forex & Gold Yield Trading
           </h1>
 
