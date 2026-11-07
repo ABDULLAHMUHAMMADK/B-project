@@ -75,7 +75,7 @@ const TransactionsPage = () => {
                 <FileText className="w-7 h-7 text-cyan-400" /> Financial Audit Ledger
               </h1>
               <p className="text-xs md:text-sm text-slate-400 mt-1">
-                Complete history of deposits, daily returns, referral bonuses, and cashouts.
+                Complete history of capital deposits and withdrawal cashouts.
               </p>
             </div>
 
@@ -100,9 +100,10 @@ const TransactionsPage = () => {
               />
             </div>
 
+            {/* Filter types updated: Only ALL, DEPOSIT, and WITHDRAWAL_REQUEST */}
             <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
               <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-              {['ALL', 'DEPOSIT', 'YIELD', 'WITHDRAWAL_REQUEST', 'REFERRAL_BONUS'].map((type) => (
+              {['ALL', 'DEPOSIT', 'WITHDRAWAL_REQUEST'].map((type) => (
                 <button
                   key={type}
                   onClick={() => setFilterType(type)}

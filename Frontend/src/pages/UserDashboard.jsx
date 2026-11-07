@@ -28,7 +28,6 @@ import ErrorBoundary from '../components/common/ErrorBoundary';
 
 // Dashboard Specific Components
 import GrowthChart from '../components/dashboard/GrowthChart';
-import MarketOverviewWidget from '../components/dashboard/MarketOverviewWidget';
 
 // Modals
 import DepositModal from '../components/modals/DepositModal';
@@ -218,9 +217,6 @@ const UserDashboard = () => {
               highlight
             />
           </div>
-
-          {/* Live Streaming Market Ticker Widget */}
-          <MarketOverviewWidget />
 
           {/* Growth Chart & Referral System Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
