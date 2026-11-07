@@ -7,7 +7,6 @@ import { useAuthStore } from '../../store/useAuthStore';
 const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
   const user = useAuthStore((state) => state.user);
 
-  // Replace this with your official Telegram or WhatsApp group URL
   const COMMUNITY_GROUP_URL = 'https://t.me/your_official_telegram_group';
 
   return (
@@ -29,7 +28,7 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
             </div>
             <div>
               <span className="text-xl font-extrabold tracking-wide text-white">
-                Trade<span className="text-cyan-400">Yield</span>
+                Monexafx <span className="text-cyan-400">Exchange</span>
               </span>
               <span className="hidden sm:inline-block ml-2 text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">
                 Pro V2.4
@@ -40,7 +39,6 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
 
         {/* Right Community Link, Notifications & User Info */}
         <div className="flex items-center gap-3">
-          {/* 1. Official Community Group Button (Telegram / WhatsApp) */}
           <a
             href={COMMUNITY_GROUP_URL}
             target="_blank"
@@ -53,7 +51,6 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
             <ExternalLink className="w-3 h-3 text-slate-400" />
           </a>
 
-          {/* 2. Notification Bell Icon */}
           <button
             onClick={onOpenNotifications}
             className="relative p-2 rounded-xl bg-slate-900/80 text-gray-300 hover:text-cyan-400 border border-slate-800 transition"
@@ -63,7 +60,6 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
           </button>
 
-          {/* 3. User Account Summary */}
           <div className="flex items-center gap-3 pl-3 border-l border-slate-800">
             <div className="relative">
               <div className="w-10 h-10 rounded-full border-2 border-cyan-400 bg-slate-800 flex items-center justify-center text-cyan-300 font-bold text-sm shadow-md shadow-cyan-500/20">
