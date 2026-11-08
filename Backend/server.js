@@ -19,6 +19,9 @@ import errorHandler from './src/middleware/errorHandler.js';
 import stripeTestRoutes from './src/routes/stripeTestRoutes.js';
 import { handleStripeTestWebhook } from './src/controllers/stripeTestWebhookController.js';
 
+// === IMPORT YIELD CRON WORKER ===
+import { initYieldCron } from './src/jobs/yieldCron.js';
+
 dotenv.config();
 
 const app = express();
@@ -105,7 +108,7 @@ app.get('/', (req, res) => {
 app.use(errorHandler);
 
 // ==========================================================
-// LOCAL DEV → connect eagerly + listen
+// LOCAL DEV → connect eagerly + listen + start cron
 // VERCEL    → export app only (no listen, lazy connect)
 // ==========================================================
 const isVercel = !!process.env.VERCEL;
@@ -115,7 +118,10 @@ if (!isVercel) {
 
   (async () => {
     try {
-      await connectDB(); // ← this is what prints "MongoDB Connected" locally
+      await connectDB(); // ← Connects to MongoDB on startup
+      
+      // === INITIALIZE YIELD CRON WORKER ===
+      initYieldCron();
     } catch (err) {
       console.error('❌ Could not connect to MongoDB on startup. Server will still start.');
     }
