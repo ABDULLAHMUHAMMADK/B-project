@@ -218,20 +218,10 @@ const UserDashboard = () => {
             />
           </div>
 
-          {/* Growth Chart & Referral System Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <ErrorBoundary>
-                <GrowthChart
-                  chartData={chartData}
-                  activeFilter={activeChartFilter}
-                  onFilterChange={setActiveChartFilter}
-                />
-              </ErrorBoundary>
-            </div>
-
-            {/* Referral System Section */}
-            <div id="referrals" className="neon-card p-5 rounded-2xl flex flex-col justify-between">
+          {/* Reordered Section: Mobile displays Referral first, Growth Chart below. Desktop retains side-by-side layout */}
+          <div className="flex flex-col lg:flex-row gap-6">
+            {/* 1. Referral System Section (First on Mobile/Tablet via order-1, Right column on Desktop via lg:order-2) */}
+            <div id="referrals" className="order-1 lg:order-2 lg:w-1/3 neon-card p-5 rounded-2xl flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -269,6 +259,17 @@ const UserDashboard = () => {
                   <span className="text-lg font-bold text-emerald-400">${referralBalance.toFixed(2)}</span>
                 </div>
               </div>
+            </div>
+
+            {/* 2. Growth Chart Section (Second on Mobile/Tablet via order-2, Main 2/3 column on Desktop via lg:order-1) */}
+            <div className="order-2 lg:order-1 lg:w-2/3">
+              <ErrorBoundary>
+                <GrowthChart
+                  chartData={chartData}
+                  activeFilter={activeChartFilter}
+                  onFilterChange={setActiveChartFilter}
+                />
+              </ErrorBoundary>
             </div>
           </div>
         </main>
