@@ -1,6 +1,7 @@
 // src/components/layout/Sidebar.jsx
 import React, { memo } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   UserCheck,
   Users,
@@ -13,7 +14,9 @@ import {
   X,
   Activity,
   Power,
+  ShieldAlert,
 } from 'lucide-react';
+import axiosInstance from '../../api/axiosInstance';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useSystemStore } from '../../store/useSystemStore';
 
@@ -22,6 +25,18 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
   const { isMaintenanceMode, toggleMaintenanceMode } = useSystemStore();
 
   const isAdmin = user?.role === 'admin';
+
+  // Fetch live KYC status for regular users
+  const { data: kycData } = useQuery({
+    queryKey: ['kyc-status-sidebar'],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/kyc/me');
+      return res.data.data;
+    },
+    enabled: !isAdmin, // Only query if user is not an admin
+  });
+
+  const kycStatus = kycData?.kycStatus || 'UNVERIFIED';
 
   const activeClass = isAdmin
     ? 'flex items-center justify-between w-full px-4 py-3 rounded-xl bg-purple-950/60 text-purple-300 font-semibold border border-purple-700/40 shadow-lg shadow-purple-950/50 text-left'
@@ -53,28 +68,48 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
         </button>
       </div>
 
-      {/* Profile Card */}
+      {/* User / Admin Profile Card with Dynamic Verification Badge */}
       <div className="mb-6 p-3 rounded-xl bg-slate-900/60 border border-slate-800">
         <div className="flex items-center gap-3">
           <div
             className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold ${
               isAdmin
                 ? 'border-purple-400 bg-purple-950 text-purple-300'
-                : 'border-cyan-400 bg-cyan-950 text-cyan-300'
+                : kycStatus === 'APPROVED'
+                ? 'border-emerald-400 bg-emerald-950 text-emerald-300'
+                : kycStatus === 'PENDING'
+                ? 'border-amber-400 bg-amber-950 text-amber-300'
+                : 'border-slate-600 bg-slate-800 text-slate-300'
             }`}
           >
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
+            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-white truncate">{user?.name || 'Administrator'}</p>
-            <p className={`text-xs flex items-center gap-1 ${isAdmin ? 'text-purple-400' : 'text-cyan-400'}`}>
-              <ShieldCheck className="w-3.5 h-3.5" /> {isAdmin ? 'Super Admin' : 'Verified Client'}
-            </p>
+            <p className="text-sm font-bold text-white truncate">{user?.name || 'Investor'}</p>
+            
+            {/* Dynamic Status Display */}
+            {isAdmin ? (
+              <p className="text-xs flex items-center gap-1 text-purple-400">
+                <ShieldCheck className="w-3.5 h-3.5" /> Super Admin
+              </p>
+            ) : kycStatus === 'APPROVED' ? (
+              <p className="text-xs flex items-center gap-1 text-emerald-400 font-semibold">
+                <ShieldCheck className="w-3.5 h-3.5" /> Verified Client
+              </p>
+            ) : kycStatus === 'PENDING' ? (
+              <p className="text-xs flex items-center gap-1 text-amber-400 font-semibold">
+                <Clock className="w-3.5 h-3.5 animate-pulse" /> Pending Review
+              </p>
+            ) : (
+              <p className="text-xs flex items-center gap-1 text-slate-400 font-medium">
+                <ShieldAlert className="w-3.5 h-3.5 text-slate-500" /> Unverified Client
+              </p>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Navigation Links */}
+      {/* Role-Based Navigation */}
       <nav className="space-y-1.5">
         {isAdmin ? (
           /* ADMIN TABS */
