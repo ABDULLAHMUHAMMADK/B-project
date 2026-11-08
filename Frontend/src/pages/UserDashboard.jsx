@@ -155,7 +155,6 @@ const UserDashboard = () => {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">Managed Capital Account</span>
-                  <span className="bg-cyan-900/50 text-cyan-300 text-[10px] px-2 py-0.5 rounded-full border border-cyan-700">Auto-Yield On</span>
                 </div>
                 <h1 className="text-2xl md:text-3xl font-extrabold text-white">Welcome, {user?.name || 'Investor'}</h1>
                 <p className="text-xs md:text-sm text-slate-400 mt-1">Real-time off-chain investment ledger & Binance yield portal.</p>
