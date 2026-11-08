@@ -115,7 +115,7 @@ const LandingPage = () => {
               />
             </div>
             <span className="text-base sm:text-2xl font-extrabold tracking-wide text-white whitespace-nowrap">
-              Monexafx <span className="text-cyan-400">Exchange</span>
+              MONEXA <span className="text-cyan-400">FX</span>
             </span>
           </Link>
 
@@ -163,10 +163,10 @@ const LandingPage = () => {
         <div className="text-center max-w-4xl mx-auto mb-8">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-950/80 border border-cyan-800 text-cyan-300 text-xs font-bold mb-4">
             <Zap className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-            <span>Welcome to Monexafx Exchange</span>
+            <span>Welcome to Monexa Fx</span>
           </div>
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white leading-tight tracking-tight mb-6">
-            Automated Crypto, Forex & Gold Yield Trading
+            Discover a Smarter Approach to Digital Investment.
           </h1>
 
           {/* Interactive Auto-Changing Card Carousel */}
