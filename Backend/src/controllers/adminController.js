@@ -5,7 +5,7 @@ import User from '../models/User.js';
 import SystemSettings from '../models/SystemSettings.js';
 import { MINIMUM_INITIAL_DEPOSIT } from '../config/constants.js';
 
-// @desc    Get system-wide financial overview, platform fees, & user investment deficits
+// @desc    Get system-wide financial overview & pending request counts
 // @route   GET /api/admin/stats
 // @access  Private/Admin
 export const getAdminStats = async (req, res, next) => {
@@ -13,13 +13,11 @@ export const getAdminStats = async (req, res, next) => {
     const totalUsers = await User.countDocuments({ role: 'user' });
     const wallets = await Wallet.find({}).populate('user', 'name email createdAt role');
 
-    // Financial Metrics
     const totalLiquidity = wallets.reduce((acc, w) => acc + (w.mainBalance || 0), 0);
     const totalProfitBalances = wallets.reduce((acc, w) => acc + (w.profitBalance || 0), 0);
     const totalReferralBalances = wallets.reduce((acc, w) => acc + (w.referralBalance || 0), 0);
     const totalWithdrawableBalance = totalLiquidity + totalProfitBalances + totalReferralBalances;
 
-    // Revenue Metrics: Sum of all 20% platform fees collected on approved cashouts
     const completedWithdrawals = await Transaction.find({
       type: 'WITHDRAWAL_REQUEST',
       status: 'COMPLETED',
@@ -29,10 +27,9 @@ export const getAdminStats = async (req, res, next) => {
       0
     );
 
-    // User Segmentation & Threshold Deficit Calculations
-    let fullyInvestedCount = 0; // >= $300
-    let partiallyInvestedCount = 0; // > $0 and < $300
-    let zeroInvestedCount = 0; // $0
+    let fullyInvestedCount = 0;
+    let partiallyInvestedCount = 0;
+    let zeroInvestedCount = 0;
 
     const userInvestmentDetails = [];
 
@@ -71,6 +68,11 @@ export const getAdminStats = async (req, res, next) => {
       status: 'PENDING',
     });
 
+    const pendingDepositsCount = await Transaction.countDocuments({
+      type: 'DEPOSIT',
+      status: 'PENDING',
+    });
+
     res.status(200).json({
       success: true,
       data: {
@@ -80,6 +82,7 @@ export const getAdminStats = async (req, res, next) => {
           totalWithdrawableBalance,
           totalPlatformFeesCollected,
           pendingWithdrawalsCount,
+          pendingDepositsCount,
           segmentation: {
             fullyInvestedCount,
             partiallyInvestedCount,
@@ -94,13 +97,106 @@ export const getAdminStats = async (req, res, next) => {
   }
 };
 
-// @desc    Get list of all pending withdrawal cashout requests
+// ==========================================
+// DEPOSIT APPROVAL QUEUE (ADMIN)
+// ==========================================
+
+// @desc    Get list of pending deposit proofs
+// @route   GET /api/admin/deposits/pending
+// @access  Private/Admin
+export const getPendingDeposits = async (req, res, next) => {
+  try {
+    const pendingDeposits = await Transaction.find({ type: 'DEPOSIT', status: 'PENDING' })
+      .populate('user', 'name email kycStatus')
+      .sort('-createdAt');
+
+    res.status(200).json({
+      success: true,
+      data: pendingDeposits,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Approve or Reject a Deposit Proof Submission
+// @route   PUT /api/admin/deposits/:id/action
+// @access  Private/Admin
+export const processDepositAction = async (req, res, next) => {
+  try {
+    const { action } = req.body;
+    const transactionId = req.params.id;
+
+    if (!['APPROVE', 'REJECT'].includes(action)) {
+      return res.status(400).json({ success: false, error: "Action must be 'APPROVE' or 'REJECT'" });
+    }
+
+    const transaction = await Transaction.findById(transactionId);
+    if (!transaction || transaction.type !== 'DEPOSIT') {
+      return res.status(404).json({ success: false, error: 'Pending deposit transaction not found' });
+    }
+
+    if (transaction.status !== 'PENDING') {
+      return res.status(400).json({ success: false, error: `Deposit already ${transaction.status.toLowerCase()}` });
+    }
+
+    if (action === 'REJECT') {
+      transaction.status = 'REJECTED';
+      await transaction.save();
+      return res.status(200).json({
+        success: true,
+        message: 'Deposit proof rejected. User main balance was not altered.',
+        data: transaction,
+      });
+    }
+
+    // Action === 'APPROVE'
+    const depositAmount = transaction.amount;
+    const wallet = await Wallet.findOne({ user: transaction.user });
+    const user = await User.findById(transaction.user);
+
+    if (!wallet) {
+      return res.status(404).json({ success: false, error: 'User wallet record not found' });
+    }
+
+    const previousBalance = wallet.mainBalance;
+    wallet.mainBalance += depositAmount;
+    await wallet.save();
+
+    if (previousBalance < MINIMUM_INITIAL_DEPOSIT && wallet.mainBalance >= MINIMUM_INITIAL_DEPOSIT) {
+      if (user && !user.firstDepositAt) {
+        user.firstDepositAt = new Date();
+        await user.save();
+      }
+    }
+
+    transaction.status = 'COMPLETED';
+    await transaction.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Deposit approved. Credited $${depositAmount} USDT to user main balance.`,
+      data: {
+        transaction,
+        updatedMainBalance: wallet.mainBalance,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// WITHDRAWAL APPROVAL QUEUE (ADMIN)
+// ==========================================
+
+// @desc    Get list of pending cashout requests
 // @route   GET /api/admin/withdrawals/pending
 // @access  Private/Admin
 export const getPendingWithdrawals = async (req, res, next) => {
   try {
     const pendingWithdrawals = await Transaction.find({ type: 'WITHDRAWAL_REQUEST', status: 'PENDING' })
-      .populate('user', 'name email')
+      .populate('user', 'name email kycStatus')
       .sort('-createdAt');
 
     res.status(200).json({
@@ -112,7 +208,7 @@ export const getPendingWithdrawals = async (req, res, next) => {
   }
 };
 
-// @desc    Process/Complete or Reject a withdrawal payout request
+// @desc    Approve or Reject a Withdrawal Cashout Request
 // @route   PUT /api/admin/withdrawals/:id/action
 // @access  Private/Admin
 export const processWithdrawalAction = async (req, res, next) => {
@@ -134,66 +230,28 @@ export const processWithdrawalAction = async (req, res, next) => {
     }
 
     const wallet = await Wallet.findOne({ user: transaction.user });
-    const user = await User.findById(transaction.user);
-
     if (!wallet) {
       return res.status(404).json({ success: false, error: 'User wallet record not found' });
     }
 
+    // Action === 'REJECT' -> Refund reserved funds back to user profit balance
     if (action === 'REJECT') {
+      wallet.profitBalance += transaction.amount;
+      await wallet.save();
+
       transaction.status = 'REJECTED';
       await transaction.save();
 
       return res.status(200).json({
         success: true,
-        message: 'Withdrawal request rejected. No funds deducted.',
+        message: 'Withdrawal rejected. Reserved funds refunded back to user profit balance.',
         data: transaction,
       });
     }
 
     // Action === 'APPROVE'
-    const withdrawAmount = transaction.amount;
-    const totalAvailable = wallet.profitBalance + wallet.referralBalance + wallet.mainBalance;
-
-    if (withdrawAmount > totalAvailable) {
-      return res.status(400).json({
-        success: false,
-        error: `Insufficient user balance at time of approval. Total available: $${totalAvailable.toFixed(2)} USDT`,
-      });
-    }
-
-    // Deduct requested amount: Profit Balance -> Referral Balance -> Main Balance
-    let remainingToDeduct = withdrawAmount;
-
-    if (wallet.profitBalance >= remainingToDeduct) {
-      wallet.profitBalance -= remainingToDeduct;
-      remainingToDeduct = 0;
-    } else {
-      remainingToDeduct -= wallet.profitBalance;
-      wallet.profitBalance = 0;
-    }
-
-    if (remainingToDeduct > 0 && wallet.referralBalance >= remainingToDeduct) {
-      wallet.referralBalance -= remainingToDeduct;
-      remainingToDeduct = 0;
-    } else if (remainingToDeduct > 0) {
-      remainingToDeduct -= wallet.referralBalance;
-      wallet.referralBalance = 0;
-    }
-
-    if (remainingToDeduct > 0) {
-      wallet.mainBalance -= remainingToDeduct;
-    }
-
-    // Reset lock counter and timestamp cashout approval
     wallet.unwithdrawnProfitCounter = 0;
     wallet.lastWithdrawalAt = new Date();
-
-    if (user && !user.hasUsedGracePeriod) {
-      user.hasUsedGracePeriod = true;
-      await user.save();
-    }
-
     await wallet.save();
 
     transaction.status = 'COMPLETED';
@@ -204,31 +262,19 @@ export const processWithdrawalAction = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Withdrawal approved, funds deducted from user wallet, and payout marked completed',
-      data: {
-        transaction,
-        updatedWallet: {
-          mainBalance: wallet.mainBalance,
-          profitBalance: wallet.profitBalance,
-          referralBalance: wallet.referralBalance,
-          unwithdrawnProfitCounter: wallet.unwithdrawnProfitCounter,
-        },
-      },
+      message: `Withdrawal approved. Payout marked completed for net $${transaction.netAmount} USDT.`,
+      data: transaction,
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get global maintenance mode status
-// @route   GET /api/admin/maintenance
-// @access  Public
+// Maintenance Mode Controls
 export const getMaintenanceStatus = async (req, res, next) => {
   try {
     let settings = await SystemSettings.findOne({});
-    if (!settings) {
-      settings = await SystemSettings.create({});
-    }
+    if (!settings) settings = await SystemSettings.create({});
 
     res.status(200).json({
       success: true,
@@ -240,15 +286,10 @@ export const getMaintenanceStatus = async (req, res, next) => {
   }
 };
 
-// @desc    Toggle system maintenance mode
-// @route   PUT /api/admin/maintenance
-// @access  Private/Admin
 export const toggleMaintenanceStatus = async (req, res, next) => {
   try {
     let settings = await SystemSettings.findOne({});
-    if (!settings) {
-      settings = await SystemSettings.create({});
-    }
+    if (!settings) settings = await SystemSettings.create({});
 
     settings.isMaintenanceMode = !settings.isMaintenanceMode;
     await settings.save();

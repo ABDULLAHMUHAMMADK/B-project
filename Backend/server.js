@@ -11,14 +11,11 @@ import connectDB from './src/config/db.js';
 import authRoutes from './src/routes/authRoutes.js';
 import walletRoutes from './src/routes/walletRoutes.js';
 import depositRoutes from './src/routes/depositRoutes.js';
-import webhookRoutes from './src/routes/webhookRoutes.js';
 import withdrawalRoutes from './src/routes/withdrawalRoutes.js';
 import adminRoutes from './src/routes/adminRoutes.js';
 import referralRoutes from './src/routes/referralRoutes.js';
 import kycRoutes from './src/routes/kycRoutes.js';
 import errorHandler from './src/middleware/errorHandler.js';
-import stripeTestRoutes from './src/routes/stripeTestRoutes.js';
-import { handleStripeTestWebhook } from './src/controllers/stripeTestWebhookController.js';
 
 // === IMPORT YIELD CRON WORKER ===
 import { initYieldCron } from './src/jobs/yieldCron.js';
@@ -45,14 +42,6 @@ app.use((req, res, next) => {
 });
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
-
-// ---- Stripe webhook (must be BEFORE express.json) ----
-app.post(
-  '/api/test-stripe/webhook',
-  express.raw({ type: 'application/json' }),
-  handleStripeTestWebhook
-);
-
 app.use(express.json({ limit: '10kb' }));
 
 app.use((req, res, next) => {
@@ -79,10 +68,10 @@ const authLimiter = rateLimit({
 
 app.use('/api', generalLimiter);
 
-// ---- DB connection middleware (safety net for serverless / cold starts) ----
+// ---- DB connection middleware ----
 app.use(async (req, res, next) => {
   try {
-    await connectDB(); // no-op after first successful connect
+    await connectDB();
     next();
   } catch (err) {
     console.error('DB connection failed in middleware:', err.message);
@@ -96,23 +85,17 @@ app.use(async (req, res, next) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/deposits', depositRoutes);
-app.use('/api/webhooks', webhookRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/referrals', referralRoutes);
 app.use('/api/kyc', kycRoutes);
-app.use('/api/test-stripe', stripeTestRoutes);
 
 app.get('/', (req, res) => {
-  res.send({ status: 'API is running securely...' });
+  res.send({ status: 'Monexafx Exchange API running securely...' });
 });
 
 app.use(errorHandler);
 
-// ==========================================================
-// LOCAL DEV → connect eagerly + listen + start cron
-// VERCEL    → export app only (no listen, lazy connect)
-// ==========================================================
 const isVercel = !!process.env.VERCEL;
 
 if (!isVercel) {
@@ -120,12 +103,10 @@ if (!isVercel) {
 
   (async () => {
     try {
-      await connectDB(); // ← Connects to MongoDB on startup
-      
-      // === INITIALIZE YIELD CRON WORKER ===
+      await connectDB();
       initYieldCron();
     } catch (err) {
-      console.error('❌ Could not connect to MongoDB on startup. Server will still start.');
+      console.error('❌ Could not connect to MongoDB on startup.');
     }
 
     app.listen(PORT, () => {

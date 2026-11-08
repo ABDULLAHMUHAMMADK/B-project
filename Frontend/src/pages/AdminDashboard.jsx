@@ -21,6 +21,8 @@ import {
   AlertCircle,
   Loader2,
   ExternalLink,
+  DollarSign,
+  Clock,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
@@ -41,7 +43,7 @@ const AdminDashboard = () => {
   const { isMaintenanceMode, toggleMaintenanceMode } = useSystemStore();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'kyc', 'withdrawals', 'users', 'profile'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'kyc', 'deposits', 'withdrawals', 'users', 'profile'
   const [toastMsg, setToastMsg] = useState('');
   const [processingId, setProcessingId] = useState(null);
 
@@ -82,7 +84,16 @@ const AdminDashboard = () => {
     },
   });
 
-  // 3. Fetch pending KYC submissions
+  // 3. Fetch pending deposits
+  const { data: pendingDeposits, isLoading: loadingDeposits } = useQuery({
+    queryKey: ['pendingDeposits'],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/admin/deposits/pending');
+      return res.data.data;
+    },
+  });
+
+  // 4. Fetch pending KYC submissions
   const { data: pendingKycs, isLoading: loadingKycs } = useQuery({
     queryKey: ['adminPendingKycs'],
     queryFn: async () => {
@@ -106,6 +117,25 @@ const AdminDashboard = () => {
     },
     onError: (err) => {
       showToast(err.response?.data?.error || 'Failed to process withdrawal action');
+      setProcessingId(null);
+    },
+  });
+
+  // Deposit Action Mutation
+  const depositActionMutation = useMutation({
+    mutationFn: async ({ id, action }) => {
+      setProcessingId(id);
+      const res = await axiosInstance.put(`/admin/deposits/${id}/action`, { action });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['pendingDeposits'] });
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+      showToast(data.message);
+      setProcessingId(null);
+    },
+    onError: (err) => {
+      showToast(err.response?.data?.error || 'Failed to process deposit action');
       setProcessingId(null);
     },
   });
@@ -202,6 +232,7 @@ const AdminDashboard = () => {
           setActiveTab={setActiveTab}
           pendingWithdrawalsCount={metrics?.pendingWithdrawalsCount || 0}
           pendingKycCount={pendingKycs?.length || 0}
+          pendingDepositsCount={metrics?.pendingDepositsCount || pendingDeposits?.length || 0}
         />
 
         <main className="flex-1 min-w-0">
@@ -217,7 +248,7 @@ const AdminDashboard = () => {
                   <ShieldCheck className="w-7 h-7 text-purple-400" /> Executive Control Center
                 </h1>
                 <p className="text-xs md:text-sm text-slate-400 mt-1">
-                  Monexafx Exchange live liquidity metrics, user directory, KYC queue, and cashout authorization.
+                  Monexafx Exchange live liquidity metrics, user directory, KYC queue, deposit audit, and cashout authorization.
                 </p>
               </div>
 
@@ -335,7 +366,6 @@ const AdminDashboard = () => {
                         </div>
                       </div>
 
-                      {/* 3 Uploaded Cloudinary Photos */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                           <span className="text-[10px] text-slate-400 block mb-1 font-semibold">ID Front:</span>
@@ -380,7 +410,6 @@ const AdminDashboard = () => {
                         </div>
                       </div>
 
-                      {/* Approve / Reject Actions */}
                       <div className="flex items-center justify-end gap-3 pt-2">
                         <button
                           onClick={() => {
@@ -408,30 +437,118 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB 3: CASHOUT REQUESTS QUEUE */}
+          {/* TAB 3: DEPOSIT VERIFICATION QUEUE */}
+          {activeTab === 'deposits' && (
+            <div className="neon-card p-6 rounded-2xl border border-slate-800">
+              <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-emerald-400" /> Pending Deposit Proofs Queue
+              </h3>
+
+              {loadingDeposits ? (
+                <div className="py-12 text-center text-slate-400 flex items-center justify-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                  <span>Loading pending deposit submissions...</span>
+                </div>
+              ) : !pendingDeposits || pendingDeposits.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 text-xs">
+                  No pending deposit proofs in the queue.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingDeposits.map((d) => {
+                    const isProcessingThis = processingId === d._id || depositActionMutation.isPending;
+                    return (
+                      <div key={d._id} className="p-4 bg-slate-900/60 rounded-xl border border-slate-800 text-xs space-y-3">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800 pb-3">
+                          <div>
+                            <span className="font-bold text-white text-sm block">{d.user?.name}</span>
+                            <span className="text-slate-400">{d.user?.email}</span>
+                          </div>
+                          <div className="text-left sm:text-right">
+                            <span className="text-emerald-400 font-bold text-sm block">${d.amount} USDT</span>
+                            <span className="text-slate-400 text-[11px]">Via {d.paymentMethod || 'USDT'}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-slate-400 block font-semibold">Transaction Hash / Order ID:</span>
+                              <span className="font-mono text-cyan-400 text-[11px] break-all bg-slate-950 p-2 rounded-lg border border-slate-800 block mt-1">
+                                {d.txHash}
+                              </span>
+                            </div>
+                            <div className="text-slate-400 text-[11px]">
+                              Submitted: {new Date(d.createdAt).toLocaleString()}
+                            </div>
+                          </div>
+
+                          {/* Cloudinary Screenshot Proof */}
+                          <div>
+                            <span className="text-slate-400 block font-semibold mb-1">Transfer Proof Screenshot:</span>
+                            <a href={d.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="relative block group">
+                              <img
+                                src={d.paymentProofUrl}
+                                alt="Payment Proof"
+                                className="h-32 w-full object-cover rounded-lg border border-slate-700 group-hover:border-emerald-400 transition"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold gap-1 rounded-lg transition">
+                                <ExternalLink className="w-4 h-4" /> View Full Proof
+                              </div>
+                            </a>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
+                          <button
+                            disabled={isProcessingThis}
+                            onClick={() => depositActionMutation.mutate({ id: d._id, action: 'REJECT' })}
+                            className="px-4 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold flex items-center gap-1.5 transition text-xs disabled:opacity-40"
+                          >
+                            <X className="w-4 h-4" /> Reject Deposit
+                          </button>
+
+                          <button
+                            disabled={isProcessingThis}
+                            onClick={() => depositActionMutation.mutate({ id: d._id, action: 'APPROVE' })}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1.5 transition text-xs disabled:opacity-40 shadow-lg shadow-emerald-950/50"
+                          >
+                            <Check className="w-4 h-4" /> Approve & Credit ${d.amount} USDT
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 4: CASHOUT REQUESTS QUEUE */}
           {activeTab === 'withdrawals' && (
             <div className="neon-card p-6 rounded-2xl border border-slate-800">
               <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-                Pending Cashout Requests Queue
+                <Clock className="w-5 h-5 text-amber-400" /> Pending Cashout Requests Queue
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="border-b border-slate-800 text-slate-400">
                       <th className="py-3 px-3">Investor Email</th>
-                      <th className="py-3 px-3">Gross Amount</th>
+                      <th className="py-3 px-3">Gross Requested</th>
                       <th className="py-3 px-3">Net Payout (20% Fee)</th>
+                      <th className="py-3 px-3">Payout Credential</th>
                       <th className="py-3 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
                     {loadingWithdrawals ? (
                       <tr>
-                        <td colSpan={4} className="py-4 text-center text-slate-500">Loading pending requests...</td>
+                        <td colSpan={5} className="py-4 text-center text-slate-500">Loading pending requests...</td>
                       </tr>
                     ) : pendingWithdrawals?.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="py-4 text-center text-slate-500">No pending withdrawal requests.</td>
+                        <td colSpan={5} className="py-4 text-center text-slate-500">No pending withdrawal requests.</td>
                       </tr>
                     ) : (
                       pendingWithdrawals?.map((w) => {
@@ -441,6 +558,7 @@ const AdminDashboard = () => {
                             <td className="py-3 px-3 font-semibold text-white">{w.user?.email}</td>
                             <td className="py-3 px-3 font-bold text-slate-300">${w.amount} USDT</td>
                             <td className="py-3 px-3 font-bold text-emerald-400">${w.netAmount} USDT</td>
+                            <td className="py-3 px-3 font-mono text-cyan-400">{w.binancePayId || d.paymentMethod}</td>
                             <td className="py-3 px-3 text-right space-x-2">
                               <button
                                 disabled={isProcessingThis}
@@ -448,7 +566,7 @@ const AdminDashboard = () => {
                                 className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-bold transition inline-flex items-center gap-1"
                               >
                                 <Check className="w-3.5 h-3.5" />
-                                <span>{isProcessingThis ? 'Processing...' : 'Approve & Pay'}</span>
+                                <span>{isProcessingThis ? 'Processing...' : `Pay Net $${w.netAmount}`}</span>
                               </button>
                               <button
                                 disabled={isProcessingThis}
@@ -469,7 +587,7 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB 4: USER DIRECTORY */}
+          {/* TAB 5: USER DIRECTORY */}
           {activeTab === 'users' && (
             <div className="neon-card p-6 rounded-2xl border border-slate-800">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -579,7 +697,7 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB 5: ADMIN PROFILE SETTINGS */}
+          {/* TAB 6: ADMIN PROFILE SETTINGS */}
           {activeTab === 'profile' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="neon-card p-6 rounded-2xl border border-slate-800">
