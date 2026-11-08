@@ -1,14 +1,15 @@
 // src/components/layout/Navbar.jsx
 import React, { memo } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, MessageSquare, Menu, ExternalLink } from 'lucide-react';
+import { Bell, MessageCircle, Menu, ExternalLink } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import LOGO_IMAGE_PATH from '../../assets/logo.jpeg';
 
 const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
   const user = useAuthStore((state) => state.user);
 
-  const COMMUNITY_GROUP_URL = 'https://t.me/your_official_telegram_group';
+  // Replace with your official BonChat link or server invite URL
+  const BONCHAT_URL = 'https://www.bonchat.com';
 
   return (
     <header className="sticky top-0 z-30 bg-[#070c16]/90 backdrop-blur-md border-b border-cyan-900/30 px-3 py-2.5 sm:px-4 sm:py-3 md:px-8">
@@ -24,11 +25,10 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
 
           {/* Logo Image & Brand Name (Redirects to Landing Page) */}
           <Link to="/" className="flex items-center gap-2.5 hover:opacity-90 transition group">
-            {/* Larger Logo Container: w-10 h-10 (mobile) / w-12 h-12 (desktop) */}
             <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-900/80 border border-cyan-500/30 flex items-center justify-center overflow-hidden shrink-0 shadow-md shadow-cyan-500/20 group-hover:border-cyan-400 transition">
               <img
                 src={LOGO_IMAGE_PATH}
-                alt="Monexafx Exchange Logo"
+                alt="MONEXA FX Logo"
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   e.target.style.display = 'none';
@@ -41,7 +41,7 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
             {/* Brand Title */}
             <div className="whitespace-nowrap">
               <span className="text-base sm:text-xl font-extrabold tracking-wide text-white">
-                Monexafx <span className="text-cyan-400">Exchange</span>
+                MONEXA <span className="text-cyan-400">FX</span>
               </span>
               <span className="hidden sm:inline-block ml-2 text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">
                 Pro V2.4
@@ -50,20 +50,22 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
           </Link>
         </div>
 
-        {/* Right Community Link, Notifications & User Info */}
+        {/* Right BonChat Link, Notifications & User Info */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Official BonChat Community Link */}
           <a
-            href={COMMUNITY_GROUP_URL}
+            href={BONCHAT_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="relative p-1.5 sm:p-2 rounded-xl bg-slate-900/80 text-cyan-400 hover:text-white hover:bg-cyan-950/60 border border-slate-800 transition flex items-center gap-1 text-xs font-bold"
-            title="Join Official Community Group"
+            className="relative p-1.5 sm:p-2 rounded-xl bg-cyan-950/80 text-cyan-300 hover:text-white hover:bg-cyan-900/80 border border-cyan-700/50 transition flex items-center gap-1.5 text-xs font-bold shadow-md shadow-cyan-950/40"
+            title="Connect via Official BonChat"
           >
-            <MessageSquare className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">Group</span>
-            <ExternalLink className="w-3 h-3 text-slate-400" />
+            <MessageCircle className="w-4 h-4 text-cyan-400" />
+            <span className="hidden sm:inline">BonChat</span>
+            <ExternalLink className="w-3 h-3 text-cyan-400/70" />
           </a>
 
+          {/* Notification Bell Icon */}
           <button
             onClick={onOpenNotifications}
             className="relative p-1.5 sm:p-2 rounded-xl bg-slate-900/80 text-gray-300 hover:text-cyan-400 border border-slate-800 transition"
@@ -73,6 +75,7 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
           </button>
 
+          {/* User Profile Summary */}
           <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-slate-800">
             <div className="relative">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-cyan-400 bg-slate-800 flex items-center justify-center text-cyan-300 font-bold text-xs sm:text-sm shadow-md shadow-cyan-500/20">
