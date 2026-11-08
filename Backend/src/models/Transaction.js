@@ -37,7 +37,7 @@ const transactionSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED'],
-      default: 'COMPLETED',
+      default: 'PENDING',
     },
     merchantTradeNo: {
       type: String,
@@ -46,6 +46,14 @@ const transactionSchema = new mongoose.Schema(
     txHash: {
       type: String,
       default: null, // On-chain blockchain TxID or reference ID
+    },
+    paymentMethod: {
+      type: String,
+      default: 'BINANCE_PAY',
+    },
+    paymentProofUrl: {
+      type: String,
+      default: null, // Cloudinary Image URL for manual deposit transfer proof
     },
     description: {
       type: String,

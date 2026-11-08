@@ -6,6 +6,12 @@ import { uploadProof } from '../middleware/uploadProof.js';
 
 const router = express.Router();
 
-router.post('/submit', protect, uploadProof.single('paymentProof'), submitManualDeposit);
+// Enforce authentication & Multer Cloudinary upload for 'paymentProof'
+router.post(
+  '/submit',
+  protect,
+  uploadProof.single('paymentProof'),
+  submitManualDeposit
+);
 
 export default router;

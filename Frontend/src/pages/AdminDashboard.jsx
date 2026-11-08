@@ -527,16 +527,27 @@ const AdminDashboard = () => {
                               {/* Cloudinary Screenshot Proof */}
                               <div>
                                 <span className="text-slate-400 block font-semibold mb-1">Transfer Proof Screenshot:</span>
-                                <a href={d.paymentProofUrl} target="_blank" rel="noopener noreferrer" className="relative block group">
-                                  <img
-                                    src={d.paymentProofUrl}
-                                    alt="Payment Proof"
-                                    className="h-32 w-full object-cover rounded-lg border border-slate-700 group-hover:border-emerald-400 transition"
-                                  />
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold gap-1 rounded-lg transition">
-                                    <ExternalLink className="w-4 h-4" /> View Full Proof
+                                {d.paymentProofUrl ? (
+                                  <a
+                                    href={d.paymentProofUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="relative block group"
+                                  >
+                                    <img
+                                      src={d.paymentProofUrl}
+                                      alt="Payment Proof"
+                                      className="h-32 w-full object-cover rounded-lg border border-slate-700 group-hover:border-emerald-400 transition"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold gap-1 rounded-lg transition">
+                                      <ExternalLink className="w-4 h-4" /> View Full Proof
+                                    </div>
+                                  </a>
+                                ) : (
+                                  <div className="h-32 w-full rounded-lg border border-slate-800 bg-slate-950 flex items-center justify-center text-slate-500 text-[11px]">
+                                    No screenshot proof uploaded
                                   </div>
-                                </a>
+                                )}
                               </div>
                             </div>
 
