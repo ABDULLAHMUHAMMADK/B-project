@@ -16,6 +16,11 @@ import {
   CheckCircle,
   Search,
   Filter,
+  UserCheck,
+  XCircle,
+  AlertCircle,
+  Loader2,
+  ExternalLink,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axiosInstance';
@@ -36,9 +41,14 @@ const AdminDashboard = () => {
   const { isMaintenanceMode, toggleMaintenanceMode } = useSystemStore();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'withdrawals', 'users', 'profile'
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'kyc', 'withdrawals', 'users', 'profile'
   const [toastMsg, setToastMsg] = useState('');
   const [processingId, setProcessingId] = useState(null);
+
+  // KYC Review States
+  const [selectedKycUser, setSelectedKycUser] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
   // User Directory Search & Filter States
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -54,7 +64,7 @@ const AdminDashboard = () => {
   const [newPassword, setNewPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // 1. Fetch system metrics & user segmentation details
+  // 1. Fetch system metrics
   const { data: statsData, isLoading: loadingStats } = useQuery({
     queryKey: ['adminStats'],
     queryFn: async () => {
@@ -63,7 +73,7 @@ const AdminDashboard = () => {
     },
   });
 
-  // 2. Fetch pending withdrawal requests queue
+  // 2. Fetch pending withdrawals
   const { data: pendingWithdrawals, isLoading: loadingWithdrawals } = useQuery({
     queryKey: ['pendingWithdrawals'],
     queryFn: async () => {
@@ -72,7 +82,16 @@ const AdminDashboard = () => {
     },
   });
 
-  // Approve / Reject Cashout Request Mutation
+  // 3. Fetch pending KYC submissions
+  const { data: pendingKycs, isLoading: loadingKycs } = useQuery({
+    queryKey: ['adminPendingKycs'],
+    queryFn: async () => {
+      const res = await axiosInstance.get('/kyc/admin/pending');
+      return res.data.data;
+    },
+  });
+
+  // Withdrawal Action Mutation
   const withdrawalActionMutation = useMutation({
     mutationFn: async ({ id, action }) => {
       setProcessingId(id);
@@ -88,6 +107,27 @@ const AdminDashboard = () => {
     onError: (err) => {
       showToast(err.response?.data?.error || 'Failed to process withdrawal action');
       setProcessingId(null);
+    },
+  });
+
+  // KYC Review Mutation
+  const kycReviewMutation = useMutation({
+    mutationFn: async ({ userId, action, reason }) => {
+      const res = await axiosInstance.put(`/kyc/admin/${userId}/review`, {
+        action,
+        rejectionReason: reason,
+      });
+      return res.data;
+    },
+    onSuccess: (data) => {
+      showToast(data.message || 'KYC decision recorded!');
+      queryClient.invalidateQueries({ queryKey: ['adminPendingKycs'] });
+      setRejectModalOpen(false);
+      setSelectedKycUser(null);
+      setRejectionReason('');
+    },
+    onError: (err) => {
+      showToast(err.response?.data?.error || 'Failed to record KYC decision');
     },
   });
 
@@ -138,15 +178,11 @@ const AdminDashboard = () => {
   const metrics = statsData?.metrics;
   const userList = statsData?.userInvestmentDetails || [];
 
-  // Filter User Directory by Search Term (Name/Email) and Status
   const filteredUsers = userList.filter((u) => {
     const matchesSearch =
       u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
       u.email.toLowerCase().includes(userSearchQuery.toLowerCase());
-
-    const matchesStatus =
-      userStatusFilter === 'ALL' || u.status === userStatusFilter;
-
+    const matchesStatus = userStatusFilter === 'ALL' || u.status === userStatusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -165,6 +201,7 @@ const AdminDashboard = () => {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           pendingWithdrawalsCount={metrics?.pendingWithdrawalsCount || 0}
+          pendingKycCount={pendingKycs?.length || 0}
         />
 
         <main className="flex-1 min-w-0">
@@ -180,7 +217,7 @@ const AdminDashboard = () => {
                   <ShieldCheck className="w-7 h-7 text-purple-400" /> Executive Control Center
                 </h1>
                 <p className="text-xs md:text-sm text-slate-400 mt-1">
-                  Live platform liquidity overview, fee revenue audit, user directory, and cashout queue management.
+                  Monexafx Exchange live liquidity metrics, user directory, KYC queue, and cashout authorization.
                 </p>
               </div>
 
@@ -239,7 +276,7 @@ const AdminDashboard = () => {
                 />
               </div>
 
-              <div className="neon-card p-6 rounded-2xl">
+              <div className="neon-card p-6 rounded-2xl border border-slate-800">
                 <h3 className="text-base font-bold text-white mb-4">User Investment Segmentation</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="bg-slate-900/60 p-4 rounded-xl border border-emerald-900/40">
@@ -267,9 +304,113 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB 2: CASHOUT REQUESTS QUEUE */}
+          {/* TAB 2: KYC AUDIT QUEUE */}
+          {activeTab === 'kyc' && (
+            <div className="neon-card p-6 rounded-2xl border border-slate-800">
+              <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-cyan-400" /> Pending KYC Verification Queue
+              </h3>
+
+              {loadingKycs ? (
+                <div className="py-12 text-center text-slate-400 flex items-center justify-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
+                  <span>Loading pending verification submissions...</span>
+                </div>
+              ) : !pendingKycs || pendingKycs.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 text-xs">
+                  No pending KYC submissions in the queue.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingKycs.map((u) => (
+                    <div key={u._id} className="p-4 bg-slate-900/60 rounded-xl border border-slate-800 text-xs space-y-3">
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-slate-800 pb-3">
+                        <div>
+                          <span className="font-bold text-white text-sm block">{u.name}</span>
+                          <span className="text-slate-400">{u.email}</span>
+                        </div>
+                        <div className="text-left sm:text-right">
+                          <span className="text-cyan-400 font-bold block">{u.kycDetails?.documentType}</span>
+                          <span className="text-slate-500 text-[11px]">ID: {u.kycDetails?.documentNumber}</span>
+                        </div>
+                      </div>
+
+                      {/* 3 Uploaded Cloudinary Photos */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block mb-1 font-semibold">ID Front:</span>
+                          <a href={u.kycDetails?.idFrontUrl} target="_blank" rel="noopener noreferrer" className="relative block group">
+                            <img
+                              src={u.kycDetails?.idFrontUrl}
+                              alt="ID Front"
+                              className="h-28 w-full object-cover rounded-lg border border-slate-700 group-hover:border-cyan-400 transition"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-bold gap-1 rounded-lg transition">
+                              <ExternalLink className="w-3.5 h-3.5" /> Full View
+                            </div>
+                          </a>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] text-slate-400 block mb-1 font-semibold">ID Back:</span>
+                          <a href={u.kycDetails?.idBackUrl} target="_blank" rel="noopener noreferrer" className="relative block group">
+                            <img
+                              src={u.kycDetails?.idBackUrl}
+                              alt="ID Back"
+                              className="h-28 w-full object-cover rounded-lg border border-slate-700 group-hover:border-cyan-400 transition"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-bold gap-1 rounded-lg transition">
+                              <ExternalLink className="w-3.5 h-3.5" /> Full View
+                            </div>
+                          </a>
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] text-slate-400 block mb-1 font-semibold">Live Selfie:</span>
+                          <a href={u.kycDetails?.selfieUrl} target="_blank" rel="noopener noreferrer" className="relative block group">
+                            <img
+                              src={u.kycDetails?.selfieUrl}
+                              alt="Live Selfie"
+                              className="h-28 w-full object-cover rounded-lg border border-slate-700 group-hover:border-cyan-400 transition"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-bold gap-1 rounded-lg transition">
+                              <ExternalLink className="w-3.5 h-3.5" /> Full View
+                            </div>
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Approve / Reject Actions */}
+                      <div className="flex items-center justify-end gap-3 pt-2">
+                        <button
+                          onClick={() => {
+                            setSelectedKycUser(u);
+                            setRejectModalOpen(true);
+                          }}
+                          disabled={kycReviewMutation.isLoading}
+                          className="px-4 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold flex items-center gap-1.5 transition text-xs"
+                        >
+                          <XCircle className="w-4 h-4" /> Reject
+                        </button>
+
+                        <button
+                          onClick={() => kycReviewMutation.mutate({ userId: u._id, action: 'APPROVE' })}
+                          disabled={kycReviewMutation.isLoading}
+                          className="px-4 py-2 rounded-xl bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 font-bold flex items-center gap-1.5 transition text-xs"
+                        >
+                          <CheckCircle className="w-4 h-4" /> Approve Client
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: CASHOUT REQUESTS QUEUE */}
           {activeTab === 'withdrawals' && (
-            <div className="neon-card p-6 rounded-2xl">
+            <div className="neon-card p-6 rounded-2xl border border-slate-800">
               <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
                 Pending Cashout Requests Queue
               </h3>
@@ -328,15 +469,14 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB 3: USER DIRECTORY (With Search & Filters) */}
+          {/* TAB 4: USER DIRECTORY */}
           {activeTab === 'users' && (
-            <div className="neon-card p-6 rounded-2xl">
+            <div className="neon-card p-6 rounded-2xl border border-slate-800">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <Users className="w-5 h-5 text-cyan-400" /> User Directory & Threshold Status
                 </h3>
 
-                {/* Search Bar & Status Filters */}
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                   <div className="relative w-full sm:w-60">
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -439,10 +579,10 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {/* TAB 4: ADMIN PROFILE SETTINGS */}
+          {/* TAB 5: ADMIN PROFILE SETTINGS */}
           {activeTab === 'profile' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="neon-card p-6 rounded-2xl">
+              <div className="neon-card p-6 rounded-2xl border border-slate-800">
                 <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
                   <User className="w-5 h-5 text-purple-400" /> Admin Credentials
                 </h3>
@@ -488,7 +628,7 @@ const AdminDashboard = () => {
                 </form>
               </div>
 
-              <div className="neon-card p-6 rounded-2xl">
+              <div className="neon-card p-6 rounded-2xl border border-slate-800">
                 <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
                   <Key className="w-5 h-5 text-amber-400" /> Security & Password
                 </h3>
@@ -538,6 +678,50 @@ const AdminDashboard = () => {
           )}
         </main>
       </div>
+
+      {/* KYC Rejection Reason Modal */}
+      {rejectModalOpen && selectedKycUser && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-[#0a101d] border border-rose-900/60 rounded-2xl p-6 max-w-md w-full space-y-4">
+            <h4 className="text-base font-bold text-white flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-rose-400" /> Reject KYC for {selectedKycUser.name}
+            </h4>
+            <p className="text-xs text-slate-400">
+              State the rejection reason so the client can submit acceptable replacement documents.
+            </p>
+
+            <textarea
+              rows={3}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="e.g. ID Front photo is blurry or illegible."
+              className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-rose-500"
+            />
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setRejectModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  kycReviewMutation.mutate({
+                    userId: selectedKycUser._id,
+                    action: 'REJECT',
+                    reason: rejectionReason,
+                  })
+                }
+                disabled={kycReviewMutation.isLoading}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs"
+              >
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Toast message={toastMsg} />
     </div>

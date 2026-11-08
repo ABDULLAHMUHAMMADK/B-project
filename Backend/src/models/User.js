@@ -1,4 +1,4 @@
-// src/models/User.js
+// Backend/src/models/User.js
 import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema(
@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please provide a password'],
       minlength: 6,
-      select: false, // Exclude password hash from standard queries
+      select: false,
     },
     role: {
       type: String,
@@ -38,15 +38,33 @@ const userSchema = new mongoose.Schema(
     },
     hasUsedGracePeriod: {
       type: Boolean,
-      default: false, // Flips to true after first 24h grace period expires
+      default: false,
     },
     firstDepositAt: {
       type: Date,
-      default: null, // Tracks exact timestamp of first deposit >= $300
+      default: null,
     },
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    // === NEW KYC VERIFICATION FIELDS ===
+    kycStatus: {
+      type: String,
+      enum: ['UNVERIFIED', 'PENDING', 'APPROVED', 'REJECTED'],
+      default: 'UNVERIFIED',
+    },
+    kycDetails: {
+      fullName: { type: String, default: '' },
+      documentType: { type: String, default: 'PASSPORT' },
+      documentNumber: { type: String, default: '' },
+      idFrontUrl: { type: String, default: '' },
+      idBackUrl: { type: String, default: '' },
+      selfieUrl: { type: String, default: '' },
+      rejectionReason: { type: String, default: '' },
+      submittedAt: { type: Date, default: null },
+      reviewedAt: { type: Date, default: null },
     },
   },
   {

@@ -17,7 +17,7 @@ import {
 import { useAuthStore } from '../../store/useAuthStore';
 import { useSystemStore } from '../../store/useSystemStore';
 
-const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTab, pendingWithdrawalsCount = 0 }) => {
+const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTab, pendingWithdrawalsCount = 0, pendingKycCount = 0 }) => {
   const user = useAuthStore((state) => state.user);
   const { isMaintenanceMode, toggleMaintenanceMode } = useSystemStore();
 
@@ -53,7 +53,7 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
         </button>
       </div>
 
-      {/* User / Admin Profile Card */}
+      {/* Profile Card */}
       <div className="mb-6 p-3 rounded-xl bg-slate-900/60 border border-slate-800">
         <div className="flex items-center gap-3">
           <div
@@ -74,10 +74,10 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
         </div>
       </div>
 
-      {/* Role-Based Navigation */}
+      {/* Navigation Links */}
       <nav className="space-y-1.5">
         {isAdmin ? (
-          /* ADMIN MENU TABS */
+          /* ADMIN TABS */
           <>
             <button
               onClick={() => handleAdminTabClick('overview')}
@@ -87,6 +87,21 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
                 <ShieldCheck className="w-5 h-5 text-purple-400" />
                 <span>Executive Overview</span>
               </div>
+            </button>
+
+            <button
+              onClick={() => handleAdminTabClick('kyc')}
+              className={activeTab === 'kyc' ? activeClass : inactiveClass}
+            >
+              <div className="flex items-center gap-3">
+                <UserCheck className="w-5 h-5 text-cyan-400" />
+                <span>KYC Queue</span>
+              </div>
+              {pendingKycCount > 0 && (
+                <span className="bg-cyan-500 text-black px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+                  {pendingKycCount}
+                </span>
+              )}
             </button>
 
             <button
@@ -125,27 +140,23 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
             </button>
           </>
         ) : (
-          /* USER SIDEBAR MENU (Reordered as requested) */
+          /* USER TABS */
           <>
-            {/* 1. Verification */}
             <NavLink to="/verification" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
               <UserCheck className="w-5 h-5 text-cyan-400" />
               <span>Verification</span>
             </NavLink>
 
-            {/* 2. Referral */}
             <NavLink to="/referrals-page" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
               <Users className="w-5 h-5 text-cyan-400" />
               <span>Referral</span>
             </NavLink>
 
-            {/* 3. Terms & Policy */}
             <NavLink to="/terms-policy" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
               <FileText className="w-5 h-5 text-cyan-400" />
               <span>Terms & Policy</span>
             </NavLink>
 
-            {/* 4. About Us */}
             <NavLink to="/about-us" className={({ isActive }) => (isActive ? activeClass : inactiveClass)}>
               <Info className="w-5 h-5 text-cyan-400" />
               <span>About Us</span>
@@ -154,7 +165,7 @@ const Sidebar = memo(({ isOpen, onCloseSidebar, onLogout, activeTab, setActiveTa
         )}
       </nav>
 
-      {/* Admin Maintenance Control & Logout */}
+      {/* Bottom Controls */}
       <div className="mt-8 pt-6 border-t border-slate-800/80 space-y-2">
         {isAdmin && (
           <button
