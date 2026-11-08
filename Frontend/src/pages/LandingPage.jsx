@@ -19,8 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import MarketOverviewWidget from '../components/dashboard/MarketOverviewWidget';
-import LOGO_IMAGE_PATH from '../assets/logo.jpeg'; // Update this path to your actual logo image
-
+import LOGO_IMAGE_PATH from '../assets/logo.jpeg';
 
 const LandingPage = () => {
   const { isAuthenticated, role } = useAuthStore();
@@ -69,7 +68,7 @@ const LandingPage = () => {
     },
     {
       id: 4,
-      title: 'Fast Binance Payout Gateways',
+      title: 'Fast Payout Gateways',
       subtitle: 'TRON (TRC20) USDT Cashouts',
       description: 'Execute instant withdrawal requests processed directly to your personal Binance Pay ID or web3 TRC20 wallet within 1 to 30 minutes.',
       badge: 'Instant Liquidity',
@@ -101,17 +100,17 @@ const LandingPage = () => {
       <header className="sticky top-0 z-40 bg-[#070c16]/90 backdrop-blur-md border-b border-cyan-900/30 px-3 py-3 sm:px-4 sm:py-4 md:px-8">
         <div className="max-w-7xl mx-auto flex justify-between items-center gap-2">
           {/* Logo Image & Brand Title */}
-          <Link to="/" className="flex items-center gap-2 shrink-0 group">
-            {/* Image Wrapper with Responsive Sizing */}
-            <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-900/80 border border-cyan-500/30 p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-cyan-500/20 group-hover:border-cyan-400 transition">
+          <Link to="/" className="flex items-center gap-2.5 shrink-0 group">
+            {/* Larger Logo Container: w-10 h-10 (mobile) / w-12 h-12 (desktop) */}
+            <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-900/80 border border-cyan-500/30 flex items-center justify-center overflow-hidden shrink-0 shadow-lg shadow-cyan-500/20 group-hover:border-cyan-400 transition">
               <img
                 src={LOGO_IMAGE_PATH}
                 alt="Monexafx Exchange Logo"
-                className="w-full h-full object-contain"
+                className="w-full h-full object-cover"
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.parentNode.innerText = 'M';
-                  e.target.parentNode.className += ' text-cyan-400 font-extrabold text-sm sm:text-base';
+                  e.target.parentNode.className += ' text-cyan-400 font-extrabold text-base sm:text-lg';
                 }}
               />
             </div>

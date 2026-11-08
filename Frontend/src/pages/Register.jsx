@@ -1,9 +1,10 @@
-// Frontend/src/pages/Register.jsx
+// src/pages/Register.jsx
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { TrendingUp, Lock, Mail, User, Users, Eye, EyeOff, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Lock, Mail, User, Users, Eye, EyeOff, ArrowRight, ShieldAlert } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import { useAuthStore } from '../store/useAuthStore';
+import LOGO_IMAGE_PATH from '../assets/logo.jpeg';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ const Register = () => {
       setAuth({ user, token });
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed. Please check your asdasdas details.');
+      setError(err.response?.data?.error || 'Registration failed. Please check your registration details.');
     } finally {
       setLoading(false);
     }
@@ -61,12 +62,23 @@ const Register = () => {
       <div className="neon-card bg-[#0b1322]/90 max-w-md w-full p-8 rounded-2xl relative border border-cyan-500/30 shadow-2xl z-10">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/30 mb-3">
-            <TrendingUp className="w-7 h-7 text-white" />
-          </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-wide">
-            Join Trade<span className="text-cyan-400">Yield</span>
-          </h1>
+          <Link to="/" className="inline-block hover:opacity-90 transition group">
+            <div className="w-14 h-14 rounded-2xl bg-slate-900/80 border border-cyan-500/30 flex items-center justify-center overflow-hidden mx-auto shadow-lg shadow-cyan-500/30 mb-3 group-hover:border-cyan-400 transition">
+              <img
+                src={LOGO_IMAGE_PATH}
+                alt="Monexafx Exchange Logo"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.parentNode.innerText = 'M';
+                  e.target.parentNode.className += ' text-cyan-400 font-extrabold text-xl';
+                }}
+              />
+            </div>
+            <h1 className="text-2xl font-extrabold text-white tracking-wide">
+              Join Monexafx <span className="text-cyan-400">Exchange</span>
+            </h1>
+          </Link>
           <p className="text-xs text-slate-400 mt-1">Start compounding daily trading profits</p>
         </div>
 

@@ -3,8 +3,7 @@ import React, { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, MessageSquare, Menu, ExternalLink } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
-import LOGO_IMAGE_PATH from '../../assets/logo.jpeg'; // Update this path to your actual logo image
-
+import LOGO_IMAGE_PATH from '../../assets/logo.jpeg';
 
 const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
   const user = useAuthStore((state) => state.user);
@@ -24,18 +23,17 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
           </button>
 
           {/* Logo Image & Brand Name (Redirects to Landing Page) */}
-          <Link to="/" className="flex items-center gap-2 hover:opacity-90 transition group">
-            {/* Logo Image Container with Responsive Width/Height & Glow Effect */}
-            <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-900/80 border border-cyan-500/30 p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-md shadow-cyan-500/20 group-hover:border-cyan-400 transition">
+          <Link to="/" className="flex items-center gap-2.5 hover:opacity-90 transition group">
+            {/* Larger Logo Container: w-10 h-10 (mobile) / w-12 h-12 (desktop) */}
+            <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-slate-900/80 border border-cyan-500/30 flex items-center justify-center overflow-hidden shrink-0 shadow-md shadow-cyan-500/20 group-hover:border-cyan-400 transition">
               <img
                 src={LOGO_IMAGE_PATH}
                 alt="Monexafx Exchange Logo"
-                className="w-full h-full object-contain"
+                className="w-full h-full object-cover"
                 onError={(e) => {
-                  // Fallback placeholder if image path isn't set yet
                   e.target.style.display = 'none';
                   e.target.parentNode.innerText = 'M';
-                  e.target.parentNode.className += ' text-cyan-400 font-extrabold text-sm sm:text-base';
+                  e.target.parentNode.className += ' text-cyan-400 font-extrabold text-base sm:text-lg';
                 }}
               />
             </div>
@@ -54,7 +52,6 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
 
         {/* Right Community Link, Notifications & User Info */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Official Community Group Button */}
           <a
             href={COMMUNITY_GROUP_URL}
             target="_blank"
@@ -67,7 +64,6 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
             <ExternalLink className="w-3 h-3 text-slate-400" />
           </a>
 
-          {/* Notification Bell Icon */}
           <button
             onClick={onOpenNotifications}
             className="relative p-1.5 sm:p-2 rounded-xl bg-slate-900/80 text-gray-300 hover:text-cyan-400 border border-slate-800 transition"
@@ -77,7 +73,6 @@ const Navbar = memo(({ onMobileSidebarToggle, onOpenNotifications }) => {
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
           </button>
 
-          {/* User Profile Summary */}
           <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-slate-800">
             <div className="relative">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-cyan-400 bg-slate-800 flex items-center justify-center text-cyan-300 font-bold text-xs sm:text-sm shadow-md shadow-cyan-500/20">

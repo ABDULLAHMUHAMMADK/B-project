@@ -1,9 +1,10 @@
 // src/pages/Login.jsx
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { TrendingUp, Lock, Mail, Eye, EyeOff, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ArrowRight, ShieldAlert } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import { useAuthStore } from '../store/useAuthStore';
+import LOGO_IMAGE_PATH from '../assets/logo.jpeg';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -54,14 +55,23 @@ const Login = () => {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div className="neon-card bg-[#0b1322]/90 max-w-md w-full p-8 rounded-2xl relative border border-cyan-500/30 shadow-2xl z-10">
-        {/* Branding Header -> Clicking logo/name redirects to Main Landing Page */}
+        {/* Branding Header -> Redirects to Landing Page */}
         <div className="text-center mb-8">
-          <Link to="/" className="inline-block hover:opacity-90 transition">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/30 mb-3">
-              <TrendingUp className="w-7 h-7 text-white" />
+          <Link to="/" className="inline-block hover:opacity-90 transition group">
+            <div className="w-14 h-14 rounded-2xl bg-slate-900/80 border border-cyan-500/30 flex items-center justify-center overflow-hidden mx-auto shadow-lg shadow-cyan-500/30 mb-3 group-hover:border-cyan-400 transition">
+              <img
+                src={LOGO_IMAGE_PATH}
+                alt="Monexafx Exchange Logo"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.parentNode.innerText = 'M';
+                  e.target.parentNode.className += ' text-cyan-400 font-extrabold text-xl';
+                }}
+              />
             </div>
             <h1 className="text-2xl font-extrabold text-white tracking-wide">
-              Trade<span className="text-cyan-400">Yield</span>
+              Monexafx <span className="text-cyan-400">Exchange</span>
             </h1>
           </Link>
           <p className="text-xs text-slate-400 mt-1">Sign in to your managed investment portal</p>
