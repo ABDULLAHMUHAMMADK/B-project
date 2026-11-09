@@ -6,12 +6,16 @@ export const useAuthStore = create(
   persist(
     (set) => ({
       user: null,
-      token: localStorage.getItem('token') || null,
+      token: null,
       role: null,
-      isAuthenticated: !!localStorage.getItem('token'),
+      isAuthenticated: false,
 
       // Set user session after login or registration
       setAuth: ({ user, token }) => {
+        // Complete wipe of all storage to ensure zero leftover data from previous user
+        localStorage.clear();
+        sessionStorage.clear();
+        
         localStorage.setItem('token', token);
         set({
           user,
@@ -24,22 +28,28 @@ export const useAuthStore = create(
       // Update cached user or wallet details dynamically
       updateUser: (userData) =>
         set((state) => ({
-          user: { ...state.user, ...userData },
+          user: state.user ? { ...state.user, ...userData } : null,
         })),
 
-      // Logout and purge credentials
+      // Logout and force window reload to wipe React component memory
       logout: () => {
-        localStorage.removeItem('token');
+        localStorage.clear();
+        sessionStorage.clear();
+        useAuthStore.persist.clearStorage();
+
         set({
           user: null,
           token: null,
           role: null,
           isAuthenticated: false,
         });
+
+        // Force browser reload to clear React state & React Query caches
+        window.location.href = '/login';
       },
     }),
     {
-      name: 'tradeyield-auth-storage', // Key name in localStorage
+      name: 'monexafx-auth-storage',
     }
   )
 );

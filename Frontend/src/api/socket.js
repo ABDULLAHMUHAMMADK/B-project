@@ -5,14 +5,14 @@ import { useAuthStore } from '../store/useAuthStore';
 let socket = null;
 
 export const initSocket = () => {
-  const token = useAuthStore.getState().token;
+  const token = useAuthStore.getState().token || localStorage.getItem('token');
 
   if (!token) return null;
 
   if (!socket) {
     socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
       auth: { token },
-      autoConnect: false, // Prevents continuous 404 polling loops when serverless WebSockets are inactive
+      autoConnect: false,
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 3,
       timeout: 5000,
@@ -23,7 +23,7 @@ export const initSocket = () => {
     });
 
     socket.on('connect_error', (err) => {
-      console.warn('Socket connection error (disabled or unmonitored serverless socket):', err.message);
+      console.warn('Socket connection error:', err.message);
     });
 
     socket.on('disconnect', () => {
@@ -38,6 +38,7 @@ export const getSocket = () => socket;
 
 export const disconnectSocket = () => {
   if (socket) {
+    socket.removeAllListeners();
     socket.disconnect();
     socket = null;
   }

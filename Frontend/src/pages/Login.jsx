@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Mail, Eye, EyeOff, ArrowRight, ShieldAlert } from 'lucide-react';
 import axiosInstance from '../api/axiosInstance';
 import { useAuthStore } from '../store/useAuthStore';
+import { disconnectSocket } from '../api/socket';
 import LOGO_IMAGE_PATH from '../assets/logo.jpeg';
 
 const Login = () => {
@@ -29,9 +30,14 @@ const Login = () => {
     setError('');
 
     try {
+      // 1. Purge any leftover socket connections from previous sessions
+      disconnectSocket();
+
+      // 2. Authenticate user
       const response = await axiosInstance.post('/auth/login', formData);
       const { user, token } = response.data.data;
 
+      // 3. Set new auth state (automatically purges stale storage cache)
       setAuth({ user, token });
 
       // Role-Based Redirection: Admins land on /admin, Investors land on /dashboard-home
@@ -61,7 +67,7 @@ const Login = () => {
             <div className="w-14 h-14 rounded-2xl bg-slate-900/80 border border-cyan-500/30 flex items-center justify-center overflow-hidden mx-auto shadow-lg shadow-cyan-500/30 mb-3 group-hover:border-cyan-400 transition">
               <img
                 src={LOGO_IMAGE_PATH}
-                alt="Monexafx Exchange Logo"
+                alt="MONEXA FX Logo"
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   e.target.style.display = 'none';
@@ -71,7 +77,7 @@ const Login = () => {
               />
             </div>
             <h1 className="text-2xl font-extrabold text-white tracking-wide">
-              Monexafx <span className="text-cyan-400">Exchange</span>
+              MONEXA <span className="text-cyan-400">FX</span>
             </h1>
           </Link>
           <p className="text-xs text-slate-400 mt-1">Sign in to your managed investment portal</p>
