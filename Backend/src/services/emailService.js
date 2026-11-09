@@ -29,7 +29,7 @@ export const sendEmail = async ({ to, subject, html }) => {
     const transporter = createTransporter();
 
     const mailOptions = {
-      from: process.env.FROM_EMAIL || `"TradeYield" <${user}>`,
+      from: process.env.FROM_EMAIL || `"MONEXA FX" <${user}>`,
       to,
       subject,
       html,

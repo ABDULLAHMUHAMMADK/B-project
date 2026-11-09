@@ -20,13 +20,13 @@ const baseLayout = (content) => `<!DOCTYPE html>
   <body>
     <div class="container">
       <div class="header">
-        <div class="brand">TradeYield</div>
+        <div class="brand">MONEXA FX</div>
       </div>
       <div class="content">
         ${content}
       </div>
       <div class="footer">
-        <p>&copy; ${new Date().getFullYear()} TradeYield Managed Funds. All rights reserved.</p>
+        <p>&copy; ${new Date().getFullYear()} MONEXA FX Managed Funds. All rights reserved.</p>
         <p>Automated security notification. Please do not reply directly to this email.</p>
       </div>
     </div>
@@ -36,12 +36,12 @@ const baseLayout = (content) => `<!DOCTYPE html>
 // 1. Registration Welcome Email
 export const welcomeEmailTemplate = (name, referralCode) => {
   const content = `
-    <h2>Welcome to TradeYield, ${name}!</h2>
+    <h2>Welcome to MONEXA FX, ${name}!</h2>
     <p>Your account has been created successfully and is now active.</p>
     <div class="highlight-box">
       <strong>Your Unique Referral Code:</strong> <span style="color: #00F0FF; font-size: 18px; font-weight: bold;">${referralCode}</span>
     </div>
-    <p>Share your link with friends to earn direct deposit bonuses and daily passive yield rewards when they invest $300 USDT or more.</p>
+    <p>Share your link with friends to earn direct deposit bonuses ($50 USDT) and daily passive yield rewards ($0.20/day) when they invest $300 USDT or more.</p>
     <p>Minimum required deposit to activate your 1% daily yield is <strong>$300 USDT</strong>.</p>
   `;
   return baseLayout(content);
@@ -52,12 +52,12 @@ export const depositApprovedTemplate = (name, amount) => {
   const content = `
     <h2>Deposit Confirmed!</h2>
     <p>Hello ${name},</p>
-    <p>Your deposit order of <strong>$${amount} USDT</strong> has been verified and credited to your account balance.</p>
+    <p>Your deposit order of <strong>$${amount} USDT</strong> has been verified and credited to your MONEXA FX account balance.</p>
     <div class="highlight-box">
       <p style="margin: 0;"><strong>Status:</strong> <span style="color: #22C55E; font-weight: bold;">APPROVED</span></p>
       <p style="margin: 5px 0 0 0;"><strong>Active Balance:</strong> $${amount} USDT</p>
     </div>
-    <p>Your daily 1% compounding returns are now active and will credit automatically every 24 hours.</p>
+    <p>Your daily 1% compounding returns will activate after the 24-hour setup period and credit automatically every 24 hours.</p>
   `;
   return baseLayout(content);
 };
@@ -72,9 +72,9 @@ export const withdrawalRequestedTemplate = (name, amount, fee, netAmount, binanc
       <p style="margin: 0;"><strong>Requested Amount:</strong> $${amount} USDT</p>
       <p style="margin: 5px 0;"><strong>Platform Fee (20%):</strong> -$${fee} USDT</p>
       <p style="margin: 5px 0 0 0; font-size: 16px;"><strong>Net Payout Amount:</strong> <span style="color: #00F0FF; font-weight: bold;">$${netAmount} USDT</span></p>
-      <p style="margin: 5px 0 0 0;"><strong>Destination Binance Pay ID:</strong> ${binancePayId}</p>
+      <p style="margin: 5px 0 0 0;"><strong>Destination Wallet / Pay ID:</strong> ${binancePayId}</p>
     </div>
-    <p>Our admin queue is reviewing your payment. You will receive an email once the funds are transferred.</p>
+    <p>Our admin queue is reviewing your payment. You will receive an email once the funds are transferred (stated processing time: 1–30 minutes).</p>
   `;
   return baseLayout(content);
 };
