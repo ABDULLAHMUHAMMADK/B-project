@@ -4,12 +4,10 @@ import { X, Upload, ShieldAlert, DollarSign, Copy, Check, QrCode, AlertTriangle 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '../../api/axiosInstance';
 
-const ADMIN_BINANCE_PAY_ID = '876543210'; // Replace with your actual Admin Binance Pay ID
-const ADMIN_TRC20_ADDRESS = 'TMonexafxUsdtDepositWalletAddress789X'; // Replace with your TRC20 address
+const ADMIN_TRC20_ADDRESS = 'TMonexafxUsdtDepositWalletAddress789X'; // Replace with your actual Admin TRC20 address
 
 const DepositModal = ({ isOpen, onClose, onShowToast }) => {
   const queryClient = useQueryClient();
-  const [paymentMethod, setPaymentMethod] = useState('BINANCE_PAY'); // 'BINANCE_PAY' or 'TRC20'
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
   const [proofFile, setProofFile] = useState(null);
@@ -112,7 +110,7 @@ const DepositModal = ({ isOpen, onClose, onShowToast }) => {
     }
 
     if (!txHash.trim()) {
-      setError('Please provide the Transaction Hash / Order ID (TxID).');
+      setError('Please provide the Transaction Hash / TxID.');
       return;
     }
 
@@ -124,7 +122,7 @@ const DepositModal = ({ isOpen, onClose, onShowToast }) => {
     const formData = new FormData();
     formData.append('amount', depositAmount);
     formData.append('txHash', txHash.trim());
-    formData.append('paymentMethod', paymentMethod);
+    formData.append('paymentMethod', 'TRC20');
     formData.append('paymentProof', proofFile);
 
     depositMutation.mutate(formData);
@@ -144,8 +142,8 @@ const DepositModal = ({ isOpen, onClose, onShowToast }) => {
             <DollarSign className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white">Deposit USDT</h3>
-            <p className="text-xs text-slate-400">Transfer USDT to Monexafx official admin account.</p>
+            <h3 className="text-lg font-bold text-white">Deposit USDT (TRC20)</h3>
+            <p className="text-xs text-slate-400">Transfer USDT to Monexafx official admin wallet address.</p>
           </div>
         </div>
 
@@ -180,61 +178,21 @@ const DepositModal = ({ isOpen, onClose, onShowToast }) => {
               </div>
             )}
 
-            {/* Payment Method Selector */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('BINANCE_PAY')}
-                className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${
-                  paymentMethod === 'BINANCE_PAY'
-                    ? 'bg-cyan-950 text-cyan-300 border-cyan-500'
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                }`}
-              >
-                Binance Pay ID
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('TRC20')}
-                className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${
-                  paymentMethod === 'TRC20'
-                    ? 'bg-cyan-950 text-cyan-300 border-cyan-500'
-                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-                }`}
-              >
-                USDT (TRC20)
-              </button>
-            </div>
-
-            {/* Admin Payment Credentials Box */}
+            {/* Admin TRC20 Payment Credentials Box */}
             <div className="p-4 bg-slate-900/90 rounded-xl border border-slate-800 space-y-3 mb-4 text-xs">
-              {paymentMethod === 'BINANCE_PAY' ? (
-                <div>
-                  <span className="text-slate-400 block mb-1">Admin Binance Pay ID:</span>
-                  <div className="flex items-center justify-between bg-black/40 p-2.5 rounded-lg border border-slate-700 font-mono text-cyan-400 font-bold">
-                    <span>{ADMIN_BINANCE_PAY_ID}</span>
-                    <button
-                      onClick={() => handleCopy(ADMIN_BINANCE_PAY_ID, 'payId')}
-                      className="text-slate-400 hover:text-white"
-                    >
-                      {copiedField === 'payId' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
+              <div>
+                <span className="text-slate-400 block mb-1">Admin TRC20 Wallet Address:</span>
+                <div className="flex items-center justify-between bg-black/40 p-2.5 rounded-lg border border-slate-700 font-mono text-cyan-400 text-[11px] truncate gap-2">
+                  <span className="truncate">{ADMIN_TRC20_ADDRESS}</span>
+                  <button
+                    onClick={() => handleCopy(ADMIN_TRC20_ADDRESS, 'trc20')}
+                    className="text-slate-400 hover:text-white shrink-0 p-1 bg-slate-800 rounded hover:bg-slate-700"
+                    title="Copy Address"
+                  >
+                    {copiedField === 'trc20' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  </button>
                 </div>
-              ) : (
-                <div>
-                  <span className="text-slate-400 block mb-1">Admin TRC20 Wallet Address:</span>
-                  <div className="flex items-center justify-between bg-black/40 p-2.5 rounded-lg border border-slate-700 font-mono text-cyan-400 text-[11px] truncate gap-2">
-                    <span className="truncate">{ADMIN_TRC20_ADDRESS}</span>
-                    <button
-                      onClick={() => handleCopy(ADMIN_TRC20_ADDRESS, 'trc20')}
-                      className="text-slate-400 hover:text-white shrink-0"
-                    >
-                      {copiedField === 'trc20' ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              )}
+              </div>
 
               <button
                 type="button"
@@ -247,10 +205,8 @@ const DepositModal = ({ isOpen, onClose, onShowToast }) => {
               {showQr && (
                 <div className="p-3 bg-white rounded-xl flex items-center justify-center">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${
-                      paymentMethod === 'BINANCE_PAY' ? ADMIN_BINANCE_PAY_ID : ADMIN_TRC20_ADDRESS
-                    }`}
-                    alt="Admin Deposit QR Code"
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${ADMIN_TRC20_ADDRESS}`}
+                    alt="Admin Deposit TRC20 QR Code"
                     className="w-32 h-32"
                   />
                 </div>
@@ -272,14 +228,14 @@ const DepositModal = ({ isOpen, onClose, onShowToast }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">Transaction Hash / Order ID (TxID)</label>
+                <label className="block text-xs font-medium text-slate-400 mb-1">Transaction Hash (TxID)</label>
                 <input
                   type="text"
                   required
                   value={txHash}
                   onChange={(e) => setTxHash(e.target.value)}
-                  placeholder="Paste TxID or Binance Pay Order ID"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none"
+                  placeholder="Paste Transaction Hash (TxID)"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none font-mono"
                 />
               </div>
 

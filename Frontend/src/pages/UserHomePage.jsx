@@ -45,9 +45,9 @@ const UserHomePage = () => {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">Investor Control Center</span>
-                  <span className="bg-cyan-900/50 text-cyan-300 text-[10px] px-2 py-0.5 rounded-full border border-cyan-700">
+                  {/* <span className="bg-cyan-900/50 text-cyan-300 text-[10px] px-2 py-0.5 rounded-full border border-cyan-700">
                     Live Session
-                  </span>
+                  </span> */}
                 </div>
                 <h1 className="text-2xl md:text-3xl font-extrabold text-white flex items-center gap-2">
                   Welcome to Dashboard, <span className="text-cyan-400">{user?.name || 'Investor'}</span> 👋
